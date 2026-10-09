@@ -1,0 +1,468 @@
+/**
+ * The presenter catalog: 25 fictional on-camera hosts (copy reads PRESENTERS.length, never a literal). None of them is, or is modelled on,
+ * a real person; every description is written so a video model can act on it directly
+ * (look, setting, delivery) and so a seller can pick by feel. Avatars are abstract
+ * silhouettes (src/components/PresenterAvatar.tsx), never photographs.
+ */
+
+export type Gender = "woman" | "man";
+export type AgeBand = "20s" | "30s" | "40s" | "50s+";
+export type Vibe = "warm" | "energetic" | "calm" | "playful" | "polished";
+export type Scene = "home" | "kitchen" | "studio" | "outdoors" | "workshop" | "office";
+
+/** Script languages the model speaks natively (ISO 639-1). */
+export type LanguageCode = "en" | "zh" | "es" | "id" | "ms" | "th" | "ar" | "pt" | "vi" | "ja" | "ko";
+
+export const LANGUAGE_NAMES: Record<LanguageCode, string> = {
+  en: "English",
+  zh: "Chinese (Mandarin)",
+  es: "Spanish",
+  id: "Indonesian",
+  ms: "Malay",
+  th: "Thai",
+  ar: "Arabic",
+  pt: "Portuguese",
+  vi: "Vietnamese",
+  ja: "Japanese",
+  ko: "Korean",
+};
+
+/** Product categories a presenter can be matched to (also the vocabulary of the product category select). */
+export const PRESENTER_CATEGORIES = [
+  "beauty",
+  "skincare",
+  "haircare",
+  "fashion",
+  "shoes",
+  "jewelry",
+  "bags",
+  "home",
+  "kitchen",
+  "cleaning",
+  "fitness",
+  "wellness",
+  "tech",
+  "phone-accessories",
+  "gaming",
+  "toys",
+  "pets",
+  "baby",
+  "food",
+  "stationery",
+  "outdoors",
+  "car",
+  "crafts",
+  "office",
+] as const;
+
+export type PresenterCategory = (typeof PRESENTER_CATEGORIES)[number];
+
+export interface Presenter {
+  id: string;
+  name: string;
+  gender: Gender;
+  ageBand: AgeBand;
+  vibe: Vibe;
+  /** Where the video is shot; used for the catalog filter. */
+  scene: Scene;
+  /** 2–3 sentences a video model can act on: build, hair, clothing, small details. */
+  look: string;
+  /** 1–2 sentences: the room, the light, what is within reach. */
+  setting: string;
+  /** How they speak: pace, pitch, mannerisms. */
+  voice: string;
+  languages: LanguageCode[];
+  bestFor: PresenterCategory[];
+  /** Avatar colours: a background and a silhouette tone. */
+  palette: { bg: string; fg: string };
+}
+
+export const VIBE_LABELS: Record<Vibe, string> = {
+  warm: "Warm",
+  energetic: "Energetic",
+  calm: "Calm expert",
+  playful: "Playful",
+  polished: "Polished",
+};
+
+export const SCENE_LABELS: Record<Scene, string> = {
+  home: "Living room",
+  kitchen: "Kitchen",
+  studio: "Studio",
+  outdoors: "Outdoors",
+  workshop: "Workshop",
+  office: "Desk",
+};
+
+export const PRESENTERS: Presenter[] = [
+  {
+    id: "maya",
+    name: "Maya",
+    gender: "woman",
+    ageBand: "20s",
+    vibe: "warm",
+    scene: "home",
+    look: "A Black woman in her mid-twenties with shoulder-length coily hair pulled into a loose puff, light freckles, and small gold hoops. She wears an oatmeal ribbed knit and holds things close to the camera with both hands when she wants you to look.",
+    setting: "A sunlit living-room corner with a linen sofa, a tall plant and morning light from a window on the left.",
+    voice: "Unhurried and friendly, a low warm tone, with a short laugh before the best part.",
+    languages: ["en"],
+    bestFor: ["skincare", "beauty", "home", "wellness"],
+    palette: { bg: "#F6D8C9", fg: "#5A2E22" },
+  },
+  {
+    id: "jun",
+    name: "Jun",
+    gender: "man",
+    ageBand: "20s",
+    vibe: "energetic",
+    scene: "studio",
+    look: "An East Asian man in his late twenties with a textured undercut, a clean white tee under an open black overshirt, and a slim steel watch. Quick hands; he taps the product to make a point.",
+    setting: "A tidy creator desk against a pale wall, a ring light off-camera, a shelf of gadgets slightly out of focus behind him.",
+    voice: "Fast, bright and precise, with crisp consonants and a rising energy toward the call to action.",
+    languages: ["en", "ko", "zh"],
+    bestFor: ["tech", "phone-accessories", "gaming", "office"],
+    palette: { bg: "#DCE4F5", fg: "#1E2A4A" },
+  },
+  {
+    id: "sofia",
+    name: "Sofía",
+    gender: "woman",
+    ageBand: "30s",
+    vibe: "playful",
+    scene: "kitchen",
+    look: "A Latina woman in her early thirties with long dark waves tucked behind one ear, a striped apron over a mustard tee, and a stack of thin bangles. Expressive eyebrows; she tastes, reacts, and shows the result.",
+    setting: "A compact white kitchen with open shelves, a bowl of citrus on the counter and soft overhead light.",
+    voice: "Lively and warm with a Spanish-inflected English, playful pauses and a habit of talking straight to you like a friend.",
+    languages: ["en", "es", "pt"],
+    bestFor: ["kitchen", "food", "home", "cleaning"],
+    palette: { bg: "#FBE3B0", fg: "#6A3B12" },
+  },
+  {
+    id: "elias",
+    name: "Elias",
+    gender: "man",
+    ageBand: "40s",
+    vibe: "calm",
+    scene: "workshop",
+    look: "A white man in his mid-forties with cropped salt-and-pepper hair, a short beard, reading glasses pushed up, and a faded navy work shirt with the sleeves rolled. Steady, deliberate hands.",
+    setting: "A wooden workbench with pegboard tools behind, a desk lamp throwing warm light, sawdust kept neatly to one side.",
+    voice: "Low, even and patient, like someone explaining a repair; he lets a feature speak before he moves on.",
+    languages: ["en"],
+    bestFor: ["home", "car", "outdoors", "crafts"],
+    palette: { bg: "#E3D9C6", fg: "#3A2E22" },
+  },
+  {
+    id: "priya",
+    name: "Priya",
+    gender: "woman",
+    ageBand: "30s",
+    vibe: "polished",
+    scene: "office",
+    look: "A South Asian woman in her thirties with a sleek low bun, a cream silk blouse and a single pearl pendant. Composed posture; she presents a product the way a buyer would inspect it, angle by angle.",
+    setting: "A bright home office with a white desk, a closed laptop, a notebook and a small vase of eucalyptus.",
+    voice: "Clear, measured and confident, slightly formal, with the key benefit stated once and precisely.",
+    languages: ["en"],
+    bestFor: ["jewelry", "fashion", "bags", "stationery", "office"],
+    palette: { bg: "#EADFF0", fg: "#3F2A55" },
+  },
+  {
+    id: "theo",
+    name: "Theo",
+    gender: "man",
+    ageBand: "20s",
+    vibe: "playful",
+    scene: "home",
+    look: "A white man in his early twenties with messy blond curls, a hoodie in washed green and a nose ring. He grins, fumbles the box on purpose, then nails the reveal.",
+    setting: "A small apartment living room with a mustard armchair, a game console on the TV stand and fairy lights along the shelf.",
+    voice: "Quick, cheeky and self-aware, with little asides to the camera and a punchy closing line.",
+    languages: ["en"],
+    bestFor: ["gaming", "toys", "phone-accessories", "tech", "food"],
+    palette: { bg: "#D9EDD6", fg: "#24422A" },
+  },
+  {
+    id: "amara",
+    name: "Amara",
+    gender: "woman",
+    ageBand: "40s",
+    vibe: "calm",
+    scene: "home",
+    look: "A Black woman in her forties with close-cropped natural hair, tortoiseshell glasses and a camel cardigan over a white shirt. Relaxed shoulders, hands that rest on the product rather than wave.",
+    setting: "A reading nook with a bookshelf wall, a floor lamp and a mug on the side table, late-afternoon light.",
+    voice: "Warm, grounded and reassuring, slower than most, with the tone of someone who has compared a lot of options.",
+    languages: ["en"],
+    bestFor: ["wellness", "home", "skincare", "baby", "pets"],
+    palette: { bg: "#F1E2CF", fg: "#4E3524" },
+  },
+  {
+    id: "mateo",
+    name: "Mateo",
+    gender: "man",
+    ageBand: "30s",
+    vibe: "energetic",
+    scene: "outdoors",
+    look: "A Latino man in his thirties with a buzz cut, a trimmed beard, a black cap worn backwards and a sleeveless training top. Athletic build; he demonstrates by using the product, not just holding it.",
+    setting: "An outdoor track or park at golden hour, a bench and a water bottle in frame, city blurred behind.",
+    voice: "Punchy and motivating, slightly breathless as if between sets, with short sentences and a clap on the key point.",
+    languages: ["en", "es"],
+    bestFor: ["fitness", "outdoors", "wellness", "shoes"],
+    palette: { bg: "#CDE7E1", fg: "#163F3A" },
+  },
+  {
+    id: "hana",
+    name: "Hana",
+    gender: "woman",
+    ageBand: "20s",
+    vibe: "calm",
+    scene: "studio",
+    look: "A Japanese woman in her late twenties with a blunt black bob, minimal makeup, a boxy beige linen shirt and small silver studs. Precise, quiet gestures; she arranges the product like a still life before she speaks.",
+    setting: "A neutral studio backdrop in warm grey, a low wooden table, a single trailing plant, diffused window light.",
+    voice: "Soft, clear and gently paced, with careful wording and a calm smile at the end.",
+    languages: ["en", "ja"],
+    bestFor: ["stationery", "skincare", "home", "crafts", "beauty"],
+    palette: { bg: "#E8E4DC", fg: "#3C3A36" },
+  },
+  {
+    id: "kwame",
+    name: "Kwame",
+    gender: "man",
+    ageBand: "30s",
+    vibe: "polished",
+    scene: "studio",
+    look: "A Black man in his mid-thirties with a tight fade, a sharp line-up, a charcoal crewneck and a slim gold chain. Broad shoulders, slow confident turns of the product toward the lens.",
+    setting: "A dark studio with a single soft key light, a matte black table and a hint of a brick wall behind.",
+    voice: "Deep, smooth and assured, a presenter's cadence with deliberate pauses before each reason.",
+    languages: ["en"],
+    bestFor: ["fashion", "shoes", "tech", "bags", "car"],
+    palette: { bg: "#D8D5E6", fg: "#272240" },
+  },
+  {
+    id: "linh",
+    name: "Linh",
+    gender: "woman",
+    ageBand: "20s",
+    vibe: "energetic",
+    scene: "home",
+    look: "A Vietnamese woman in her early twenties with long straight hair and curtain bangs, a lilac cropped cardigan and clear-framed glasses. Bubbly, fast hands, holds products right up to the camera.",
+    setting: "A pastel bedroom desk with a mirror, LED strip lighting, a tidy row of skincare bottles.",
+    voice: "Bright, quick and enthusiastic, with excited emphasis on textures and colours and a friendly nudge to tap the link.",
+    languages: ["en", "vi"],
+    bestFor: ["beauty", "skincare", "haircare", "phone-accessories", "fashion"],
+    palette: { bg: "#EBDDF5", fg: "#4B2E63" },
+  },
+  {
+    id: "owen",
+    name: "Owen",
+    gender: "man",
+    ageBand: "50s+",
+    vibe: "warm",
+    scene: "kitchen",
+    look: "A white man in his late fifties with thick grey hair, a full beard, a plaid flannel over a tee and a tea towel over one shoulder. Big practical hands; he shows how something works before saying why.",
+    setting: "A farmhouse kitchen with a wooden island, copper pans hanging, a window over the sink with garden light.",
+    voice: "Rumbling, kind and unhurried, with dry humour and a plain-spoken verdict at the end.",
+    languages: ["en"],
+    bestFor: ["kitchen", "food", "home", "outdoors", "cleaning"],
+    palette: { bg: "#E6D5C3", fg: "#4A3324" },
+  },
+  {
+    id: "zara",
+    name: "Zara",
+    gender: "woman",
+    ageBand: "30s",
+    vibe: "polished",
+    scene: "home",
+    look: "A Middle Eastern woman in her thirties with glossy dark hair worn down, a tailored ivory blazer, a bold red lip and gold ear cuffs. Elegant, precise hands; she angles jewelry and fabric into the light.",
+    setting: "A chic living room with a cream boucle sofa, a marble side table and a tall mirror catching soft daylight.",
+    voice: "Smooth, articulate and persuasive, with elegant phrasing and a confident, slightly lower register.",
+    languages: ["en", "ar"],
+    bestFor: ["jewelry", "fashion", "beauty", "bags", "home"],
+    palette: { bg: "#F3D6D2", fg: "#6B2B2B" },
+  },
+  {
+    id: "diego",
+    name: "Diego",
+    gender: "man",
+    ageBand: "20s",
+    vibe: "warm",
+    scene: "outdoors",
+    look: "A Brazilian man in his late twenties with sun-lightened curls, tan skin, a loose white linen shirt and a woven bracelet. Easy smile; he leans in and talks like he's recommending something to a mate.",
+    setting: "A balcony or beach-town café terrace with a rattan chair, bright sky and soft wind in the plants.",
+    voice: "Relaxed, warm and musical, Portuguese-inflected English, with an easy laugh and a sincere recommendation.",
+    languages: ["en", "pt", "es"],
+    bestFor: ["outdoors", "fashion", "wellness", "food", "shoes"],
+    palette: { bg: "#FBE5C8", fg: "#7A4A1E" },
+  },
+  {
+    id: "nadia",
+    name: "Nadia",
+    gender: "woman",
+    ageBand: "40s",
+    vibe: "warm",
+    scene: "kitchen",
+    look: "An Indonesian woman in her forties with hair in a neat ponytail, a floral blouse and a simple watch. Motherly and practical; she wipes, opens and closes things to show they hold up.",
+    setting: "A family kitchen with a tiled backsplash, a fruit bowl, kids' drawings on the fridge and warm overhead light.",
+    voice: "Kind, steady and practical, with the reassurance of someone who buys for a whole household.",
+    languages: ["en", "id", "ms"],
+    bestFor: ["kitchen", "baby", "cleaning", "home", "food"],
+    palette: { bg: "#F4E0C4", fg: "#5E3B1E" },
+  },
+  {
+    id: "felix",
+    name: "Felix",
+    gender: "man",
+    ageBand: "30s",
+    vibe: "calm",
+    scene: "office",
+    look: "A white man in his thirties with neatly combed auburn hair, round wire glasses, a navy merino sweater and a plain wedding band. Still posture, small precise gestures toward each feature.",
+    setting: "A minimalist desk with a monitor, a desk mat, a mechanical keyboard and a lamp; a plant in the corner.",
+    voice: "Even, thoughtful and articulate, like a tech reviewer explaining trade-offs without hype.",
+    languages: ["en"],
+    bestFor: ["tech", "office", "stationery", "phone-accessories", "gaming"],
+    palette: { bg: "#D5E2EC", fg: "#1F3A4E" },
+  },
+  {
+    id: "aisha",
+    name: "Aisha",
+    gender: "woman",
+    ageBand: "20s",
+    vibe: "playful",
+    scene: "studio",
+    look: "A Black woman in her twenties with long box braids tied high, a bright orange hoodie and hoop earrings. Animated face, fast reactions, holds the product right into the lens for the reveal.",
+    setting: "A colourful creator corner with a pink backdrop, a neon sign out of focus and a desk with props.",
+    voice: "Fun, fast and expressive, with big reactions, a joke, then a straight-to-camera 'here's why'.",
+    languages: ["en"],
+    bestFor: ["beauty", "haircare", "fashion", "phone-accessories", "toys"],
+    palette: { bg: "#FFD9C2", fg: "#7A2E12" },
+  },
+  {
+    id: "ravi",
+    name: "Ravi",
+    gender: "man",
+    ageBand: "40s",
+    vibe: "polished",
+    scene: "office",
+    look: "A South Asian man in his forties with short dark hair greying at the temples, a crisp light-blue shirt with rolled sleeves and a leather-strap watch. Calm authority; he sets the product down and walks through it point by point.",
+    setting: "A modern office corner with a glass desk, a shelf of books and a city window in soft focus.",
+    voice: "Measured, articulate and credible, a presenter's clarity with the three main reasons counted on his fingers.",
+    languages: ["en"],
+    bestFor: ["office", "tech", "car", "bags", "wellness"],
+    palette: { bg: "#DFE6DA", fg: "#2E4A2B" },
+  },
+  {
+    id: "mei",
+    name: "Mei",
+    gender: "woman",
+    ageBand: "30s",
+    vibe: "calm",
+    scene: "home",
+    look: "A Chinese woman in her thirties with a soft low ponytail, a sage-green knit and small jade studs. Gentle, deliberate hands; she demonstrates texture by touch and shows close-ups patiently.",
+    setting: "A calm apartment living room with a light wood table, a tea set and a large window with sheer curtains.",
+    voice: "Gentle, clear and unhurried, with careful comparisons and a reassuring close.",
+    languages: ["en", "zh"],
+    bestFor: ["skincare", "home", "wellness", "kitchen", "baby"],
+    palette: { bg: "#DCE8DD", fg: "#2F4A36" },
+  },
+  {
+    id: "lucas",
+    name: "Lucas",
+    gender: "man",
+    ageBand: "20s",
+    vibe: "energetic",
+    scene: "workshop",
+    look: "A white man in his mid-twenties with a dark mullet-ish cut, a denim jacket covered in enamel pins and tattooed forearms. Restless energy; he spins, flips and clicks products to show they're sturdy.",
+    setting: "A garage-style creator space with a tool wall, a rolling cart and a cold LED work light.",
+    voice: "Loud, fast and fun, with sound-effect-like emphasis on clicks and snaps and a 'trust me' finish.",
+    languages: ["en"],
+    bestFor: ["car", "gaming", "outdoors", "tech", "toys"],
+    palette: { bg: "#DDDDE4", fg: "#2A2A38" },
+  },
+  {
+    id: "chloe",
+    name: "Chloé",
+    gender: "woman",
+    ageBand: "50s+",
+    vibe: "polished",
+    scene: "home",
+    look: "A white woman in her fifties with a silver chin-length bob, a black turtleneck, a statement ring and tortoiseshell glasses on a chain. Elegant, calm, with a knowing half-smile.",
+    setting: "A tasteful living room with a velvet armchair, framed prints and a side table with fresh flowers.",
+    voice: "Refined, warm and witty, slower and lower, with an opinionated verdict that sounds earned.",
+    languages: ["en"],
+    bestFor: ["jewelry", "home", "skincare", "fashion", "stationery"],
+    palette: { bg: "#E9E1DB", fg: "#4A3B3B" },
+  },
+  {
+    id: "noor",
+    name: "Noor",
+    gender: "woman",
+    ageBand: "20s",
+    vibe: "warm",
+    scene: "studio",
+    look: "A Malaysian woman in her twenties wearing a dusty-rose hijab, a cream long-sleeve top and a delicate bracelet. Friendly, open gestures; she holds products beside her face for scale.",
+    setting: "A soft-pink studio corner with a small vanity, a round mirror and a tray of products.",
+    voice: "Sweet, upbeat and sincere, with a conversational pace and a gentle 'I'll link it below'.",
+    languages: ["en", "ms", "id"],
+    bestFor: ["beauty", "skincare", "fashion", "bags", "haircare"],
+    palette: { bg: "#F5DCE0", fg: "#6E2F43" },
+  },
+  {
+    id: "sam",
+    name: "Sam",
+    gender: "man",
+    ageBand: "30s",
+    vibe: "playful",
+    scene: "home",
+    look: "A mixed-race man in his thirties with a short afro, a thick moustache, a vintage band tee and a corduroy jacket. Deadpan delivery that breaks into a grin; he narrates like a story.",
+    setting: "A cosy flat with record shelves, a worn leather sofa and a lamp with a warm shade.",
+    voice: "Dry, laid-back and funny, mid-pitch, with a slow build and a surprisingly earnest recommendation.",
+    languages: ["en"],
+    bestFor: ["food", "pets", "home", "gaming", "toys"],
+    palette: { bg: "#E6DCC8", fg: "#3F3122" },
+  },
+  {
+    id: "ingrid",
+    name: "Ingrid",
+    gender: "woman",
+    ageBand: "40s",
+    vibe: "energetic",
+    scene: "outdoors",
+    look: "A white woman in her forties with a blonde braid, sun-flushed cheeks, a teal fleece and a running cap. Strong, outdoorsy presence; she shows gear in use with quick, confident movements.",
+    setting: "A trail or lakeside at bright midday, a backpack and trekking poles leaning against a rock.",
+    voice: "Upbeat, direct and encouraging, a coach's cadence with clear do-this-next instructions.",
+    languages: ["en"],
+    bestFor: ["outdoors", "fitness", "pets", "wellness", "car"],
+    palette: { bg: "#CFE4E8", fg: "#1D4650" },
+  },
+  {
+    id: "tariq",
+    name: "Tariq",
+    gender: "man",
+    ageBand: "20s",
+    vibe: "warm",
+    scene: "kitchen",
+    look: "A Middle Eastern man in his late twenties with dark curly hair, a short beard, a white tee under a black apron and a beaded bracelet. Gentle hands, tastes with his eyes closed, then nods at the camera.",
+    setting: "A small bright kitchen with a marble counter, hanging herbs and a window spilling morning light.",
+    voice: "Warm, mellow and generous, Arabic-inflected English, with an easy 'you have to try this'.",
+    languages: ["en", "ar"],
+    bestFor: ["food", "kitchen", "wellness", "home", "cleaning"],
+    palette: { bg: "#F2DEC2", fg: "#5A3A1A" },
+  },
+];
+
+export function presenterById(id: string): Presenter | null {
+  return PRESENTERS.find((p) => p.id === id) ?? null;
+}
+
+/** The persona paragraph handed to the video prompt builder. */
+export function promptDescription(p: Presenter): string {
+  const pronoun = p.gender === "woman" ? "She" : "He";
+  const age = p.ageBand === "50s+" ? "in their fifties or older" : `in their ${p.ageBand}`;
+  return [
+    `${p.name}, a fictional ${p.gender} ${age}.`,
+    p.look,
+    `Setting: ${p.setting}`,
+    `${pronoun} speaks ${p.voice.charAt(0).toLowerCase()}${p.voice.slice(1)}`,
+  ].join(" ");
+}
+
+export function languageName(code: string): string {
+  return (LANGUAGE_NAMES as Record<string, string>)[code] ?? code;
+}

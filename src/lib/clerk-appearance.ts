@@ -1,0 +1,45 @@
+/**
+ * Clerk components live inside the always-dark pane (.pane-ink), so they use one fixed
+ * dark palette that matches the brand in both site themes: coral for the primary action,
+ * the muse violet for focus rings, warm off-white ink.
+ */
+export const clerkAppearance = {
+  variables: {
+    colorPrimary: "#E8562A",
+    colorPrimaryForeground: "#FFF7F3",
+    colorBackground: "#15110E",
+    colorForeground: "#F3EEE6",
+    colorMuted: "#211D19",
+    colorMutedForeground: "#A89E92",
+    colorInput: "#1A1714",
+    colorInputForeground: "#F3EEE6",
+    colorBorder: "rgba(243, 238, 230, 0.14)",
+    colorRing: "#8B7DFF",
+    colorDanger: "#FF8A5B",
+    colorSuccess: "#5CC98F",
+    colorNeutral: "#F3EEE6",
+    colorShimmer: "rgba(255, 255, 255, 0.08)",
+    borderRadius: "16px",
+    fontFamily: "var(--font-geist), ui-sans-serif, system-ui, sans-serif",
+    fontSize: "16px",
+  },
+  elements: {
+    rootBox: "!w-full !min-w-0",
+    cardBox: "!w-full !max-w-full !min-w-0 !shadow-none !border-0 !bg-transparent",
+    card: "!w-full !min-w-0 !bg-transparent !shadow-none !border-0 !p-0",
+    header: "!text-left",
+    headerTitle: "!text-[1.35rem] !font-semibold !tracking-[-0.01em]",
+    headerSubtitle: "!text-[#A89E92]",
+    footer: "!bg-transparent !bg-none [&_*]:!bg-transparent",
+    footerAction: "hidden",
+    formFieldLabel: "!text-[#CFC6BB]",
+    formFieldInput: "!min-h-[50px] !text-[16px]",
+    formButtonPrimary: "!min-h-[50px] !rounded-full !text-[1rem] !font-semibold active:!scale-[0.97] !transition-transform",
+    otpCodeFieldInput: "!min-h-[52px] !text-[1.2rem]",
+    formResendCodeLink: "!text-[#FF9A78]",
+    identityPreviewEditButton: "!text-[#FF9A78]",
+    userButtonAvatarBox: "!h-9 !w-9",
+    userButtonPopoverCard: "!rounded-[20px]",
+    userButtonPopoverActionButton: "!rounded-xl",
+  },
+} as const;

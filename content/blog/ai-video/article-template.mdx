@@ -1,0 +1,138 @@
+---
+title: "Article template: how a WindowMuse guide is written"
+description: "The frontmatter, the components and the house rules for a guide on the WindowMuse blog, shown in one file that never goes public."
+publishedAt: 2026-10-09
+updatedAt: 2026-10-09
+keywords: ["windowmuse article template", "how to write a seller guide"]
+draft: true
+featured: false
+faq:
+  - q: "How do I publish a guide?"
+    a: "Copy this file to content/blog/<category>/<slug>.mdx, fill in the frontmatter, remove the draft line, commit and push. The build renders the article, updates its hub, the sitemap and llms.txt, and the indexnow script pings search engines."
+  - q: "What if I want it to go live on a future date?"
+    a: "Set publishedAt to that date. Anything dated in the future stays private, and the owner can still check it at /admin/preview/<category>/<slug>."
+  - q: "Where does the FAQ block come from?"
+    a: "From the faq list in the frontmatter. It renders under the article as an accordion and is also emitted as FAQPage structured data."
+---
+
+This file is the article template. It has `draft: true`, so it never appears on the public site, in the sitemap or in llms.txt; the owner reads it at `/admin/preview/ai-video/article-template`. A new guide starts as a copy of this file.
+
+## Frontmatter: what every field does
+
+`title` is the H1 and the browser title (keep it under 70 characters; the share image scales down past 48). `description` is the meta description and the italic standfirst under the title (120 to 160 characters). `publishedAt` and `updatedAt` are dates in `YYYY-MM-DD`; both are printed on the page, and `updatedAt` becomes `dateModified` in the structured data and `lastmod` in the sitemap, so bump it only for real edits. `category` is implied by the folder, never written. `keywords` lists two to four phrases the guide should rank for; the first three also become automatic internal links from other guides, so make them phrases of at least eight characters that read naturally in a sentence. `featured: true` puts the guide in the "Start here" row of the blog hub. `image` is optional: `{ src, alt, credit?, creditUrl?, width?, height? }`, where `src` is a file under `public/blog/` or an `images.pexels.com` URL. `faq` is the list of questions rendered under the article.
+
+<Callout title="Who is speaking">
+Every guide is written by WindowMuse, the organization. No author bylines, no invented credentials, no testimonials, no numbers we did not measure. Where a claim needs support, link the source in the sentence.
+</Callout>
+
+## Headings and the table of contents
+
+Only H2 headings (`##`) build the table of contents, which appears when a guide has at least three of them: inline on phones, sticky in the right column on desktop. Phrase H2s as the questions a seller types into a search box and answer each one in the first sentence of its section. Use H3 for sub-steps inside a section; they do not appear in the table of contents.
+
+## Steps
+
+Use `Steps` for anything a seller does in order. Each step has a title of a few words and one or two sentences; it is a procedure, not an essay.
+
+<Steps
+  title="Publishing a guide"
+  items={[
+    { title: "Copy this file", text: "Save it as content/blog/<category>/<slug>.mdx. The slug is lower-case letters, digits and hyphens; it becomes the URL and cannot change later without a redirect." },
+    { title: "Fill in the frontmatter", text: "Title, description, both dates, keywords, and the FAQ. Remove the draft line when the text is final." },
+    { title: "Preview it", text: "Push the branch, open /admin/preview/<category>/<slug> on the preview deployment, and read it on a phone." },
+    { title: "Ship it", text: "Merge to main. The build renders the page, the hub, the sitemap and llms.txt; then run npm run indexnow with the URL." },
+  ]}
+/>
+
+## Points and checklists
+
+`Points` is a bullet list with an optional bold lead-in per item, for summaries. `Checklist` is a list with tick marks for things a seller verifies before an action (posting, ordering, uploading).
+
+<Points
+  title="House rules for product claims"
+  items={[
+    { lead: "Verifiable facts only.", text: "Material, size, what is in the box, what it does. Nothing the seller cannot show on camera or on the listing." },
+    { lead: "No medical language.", text: "Cures, treats, prevents, heals, and any weight-loss promise are fatal findings in the studio's compliance check and stay out of guides too." },
+    { lead: "No fake customers.", text: "A presenter speaks for the brand about the product. 'I have been using this for a month' is a customer line and never appears." },
+  ]}
+/>
+
+<Checklist
+  title="Before a guide is merged"
+  items={[
+    "Every claim about TikTok, TikTok Shop or the FTC links to the official page it comes from.",
+    "No dollar figures or percentages that were not measured or quoted from a named source.",
+    "The AI-label reminder appears once in any guide that tells a seller to post a video.",
+    "Read once on a 390px-wide screen: no table wider than its scroll box, no sideways scroll.",
+  ]}
+/>
+
+## Compare and Table
+
+`Compare` sets a weak version beside a better one, two columns, left to right. It is the fastest way to show what a rule means in practice. `Table` is for real data with a header row; it scrolls sideways on phones instead of widening the page.
+
+<Compare
+  left="Reads as a fake customer"
+  right="Reads as a brand presenter"
+  rows={[
+    ["I've been using this bottle for a month and I love it.", "This bottle keeps drinks cold for 24 hours; the lid locks with one hand."],
+    ["Trust me, it changed my mornings.", "It fits a car cup holder and goes in the dishwasher."],
+    ["Everyone needs this.", "If you carry water all day, this is the size that fits a bag pocket."],
+  ]}
+/>
+
+<Table
+  caption="Credit cost by length and resolution"
+  head={["Length", "480p", "720p", "1080p"]}
+  rows={[
+    ["10 or 15 seconds", "1 credit", "1 credit", "2 credits"],
+    ["20 or 30 seconds", "2 credits", "2 credits", "4 credits"],
+  ]}
+/>
+
+## Script examples
+
+`ScriptExample` lays a script out the way the studio edits it: hook, body, call to action. The footer counts the words against the length budget of 2.5 words per second, so a reader sees why a 15-second script has to stay under 40 words. Give it `seconds` (10, 15, 20 or 30), optionally `language` and a `label`.
+
+<ScriptExample
+  label="Insulated bottle, demo angle"
+  seconds={15}
+  hook="Still drinking warm water by lunch?"
+  body="This 24-ounce bottle keeps ice for a full day. The lid locks with one hand and the whole thing goes in the dishwasher."
+  cta="Tap the product card to see colors and sizes."
+/>
+
+## The label reminder
+
+`LabelReminder` is the fixed box that states the two switches TikTok asks for on an AI presenter video. The wording is the same everywhere on the site, including the download page in the studio, so a seller reads the same instruction every time. Drop it into any guide that ends with a video being posted; the optional children add a one-line note underneath.
+
+<LabelReminder>
+TikTok's own description of the label is in its Help Center article "About AI-generated content"; the disclosure setting is described in "About the Commercial Content Disclosure setting for creators".
+</LabelReminder>
+
+## Callouts
+
+Three tones: `note` (default) for context, `tip` for a shortcut, `warn` for a mistake that costs money or a listing.
+
+<Callout tone="tip" title="Write the hook last">
+The hook is the first sentence the presenter says. Write the body first, find the one fact a viewer would stop for, then turn that fact into a question or a contrast for the hook.
+</Callout>
+
+<Callout tone="warn" title="Do not describe the product from memory">
+The video model shows the product exactly as photographed. If a guide tells sellers to add a colour or a feature the photos do not show, the result will not match the listing and the video will be wrong.
+</Callout>
+
+## Links, images and quotes
+
+Links to other guides and to product pages are plain markdown links: `[the presenter catalog](/presenters)`. On top of that, the renderer turns the first occurrence of each other guide's main keyword, each non-empty hub's name and a few product phrases (presenter catalog, free trial, credit packs, compliance check) into a link automatically, at most five per article and never inside headings. Blockquotes are for quoting a rule or a policy verbatim:
+
+> We also require creators to label all AI-generated content that contains realistic images, audio, and video.
+
+## The studio call to action
+
+`StudioCTA` is the dark pane that sends the reader to the studio. The article template already ends every guide with the site-wide call to action, so use this one only mid-article, where the text has just shown something the reader can try, and give it a title that names that thing.
+
+<StudioCTA title="Try the script above on your own product" body="Upload the photos, pick a presenter, paste the script. The compliance check runs before anything is generated." />
+
+## Closing a guide
+
+End with the answer, not a summary. The last paragraph says what the seller should do next and links to the one page that helps them do it. The FAQ from the frontmatter, the site-wide call to action and related guides follow automatically.
