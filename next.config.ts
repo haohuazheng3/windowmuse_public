@@ -59,10 +59,10 @@ const nextConfig: NextConfig = {
     ],
   },
   outputFileTracingIncludes: {
-    "/blog/**": ["./content/blog/**/*"],
+    "/blog/**": ["./content/blog/**/*", "./content/tools/**/*"],
     "/sitemap.xml": ["./content/blog/**/*"],
     "/llms.txt": ["./content/blog/**/*"],
-    "/admin/**": ["./content/blog/**/*"],
+    "/admin/**": ["./content/blog/**/*", "./content/tools/**/*"],
   },
   async headers() {
     return [

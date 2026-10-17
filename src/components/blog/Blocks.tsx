@@ -1,6 +1,8 @@
 import Link from "next/link";
+import Image from "next/image";
 import type { ReactNode } from "react";
 import { LogoMark } from "@/components/Logo";
+import type { PostImage } from "@/lib/blog";
 import type { MdxComponents } from "@/lib/mdx";
 
 /*
@@ -296,7 +298,80 @@ export function StudioCTA({
   );
 }
 
-export const BLOG_COMPONENTS = {
+/**
+ * The answer-first block: the first sentence(s) of a section, set apart so a reader (and a
+ * search snippet) gets the answer before the explanation. Use it right under an H2.
+ */
+export function Answer({ children }: { children: ReactNode }) {
+  return (
+    <div className="pane-inset relative my-6 overflow-hidden px-5 py-4 font-sans before:absolute before:inset-y-4 before:left-0 before:w-[3px] before:rounded-r-full before:bg-accent sm:px-6">
+      <p className="eyebrow eyebrow-accent">In short</p>
+      <div className="mt-1.5 text-[1.08rem] font-medium leading-relaxed text-ink [&_a]:text-accent-text [&_a]:underline [&_p+p]:mt-2">{children}</div>
+    </div>
+  );
+}
+
+function hostOf(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return url;
+  }
+}
+
+/** An inline fact with its source: the sentence stays in the paragraph, the citation follows as a small link. */
+export function DataPoint({ source, label, children }: { source: string; label?: string; children: ReactNode }) {
+  return (
+    <span className="font-medium text-ink">
+      {children}
+      <a href={source} rel="nofollow noopener" target="_blank" className="ml-1 align-baseline !text-[0.78rem] !font-semibold !text-ink-4 !no-underline hover:!text-accent-text">
+        [{label ?? hostOf(source)}]
+      </a>
+    </span>
+  );
+}
+
+/** The nth frontmatter image (1-based) as a figure with the Pexels credit line. Unknown n renders nothing. */
+function makeFigure(images: PostImage[]) {
+  return function Figure({ n = 1, caption }: { n?: number; caption?: string }) {
+    const img = images[n - 1];
+    if (!img) return null;
+    return (
+      <figure className="my-8 font-sans">
+        <Image src={img.src} alt={img.alt} width={img.width ?? 1600} height={img.height ?? 1067} sizes="(max-width: 1024px) 100vw, 720px" className="h-auto w-full rounded-[20px] bg-pane-2" />
+        {caption || img.credit ? (
+          <figcaption className="mt-2 px-1 text-[0.82rem] text-ink-4">
+            {caption ? <span>{caption} </span> : null}
+            {img.credit ? (
+              <span>
+                Photo by{" "}
+                {img.creditUrl ? (
+                  <a href={img.creditUrl} rel="nofollow noopener" target="_blank" className="underline hover:text-ink-2">
+                    {img.credit}
+                  </a>
+                ) : (
+                  img.credit
+                )}{" "}
+                on Pexels
+              </span>
+            ) : null}
+          </figcaption>
+        ) : null}
+      </figure>
+    );
+  };
+}
+
+/** A link to another tool-first page by tool id; renders plain text when no public page hosts that tool yet. */
+function makeToolLink(routes: Record<string, string>) {
+  return function ToolLink({ id, children }: { id: string; children: ReactNode }) {
+    const href = routes[id];
+    if (!href) return <span>{children}</span>;
+    return <Link href={href}>{children}</Link>;
+  };
+}
+
+const STATIC_COMPONENTS = {
   Callout,
   Steps,
   Compare,
@@ -306,4 +381,13 @@ export const BLOG_COMPONENTS = {
   ScriptExample,
   LabelReminder,
   StudioCTA,
+  Answer,
+  DataPoint,
 } as unknown as MdxComponents;
+
+export const BLOG_COMPONENTS = STATIC_COMPONENTS;
+
+/** The block set for one article: the static blocks plus Figure (bound to its images) and ToolLink (bound to the tool index). */
+export function articleComponents(ctx: { images: PostImage[]; toolRoutes: Record<string, string> }): MdxComponents {
+  return { ...STATIC_COMPONENTS, Figure: makeFigure(ctx.images), ToolLink: makeToolLink(ctx.toolRoutes) } as unknown as MdxComponents;
+}

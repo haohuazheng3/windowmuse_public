@@ -1,0 +1,345 @@
+/*
+ * Safe arithmetic for calculator and converter tools. A formula is a short expression in
+ * the tool's JSON ("round(seconds * pace)", "price * (1 - fee / 100)"), parsed into a tree
+ * once and evaluated on every keystroke against the input values. Nothing is eval'd and
+ * nothing outside the grammar below can run.
+ *
+ * Grammar (lowest precedence first):
+ *   comparison   a < b   a <= b   a > b   a >= b   a == b   a != b     → 1 or 0
+ *   additive     a + b   a - b
+ *   term         a * b   a / b   a % b
+ *   power        a ^ b   (right-associative)
+ *   unary        -a   +a
+ *   primary      number · name · fn(args) · ( expr )
+ *
+ * Numbers: 12, 1.5, .5, 2e3. Names: input ids, outputs computed earlier in the same tool,
+ * and the table's row variable. Functions: min, max, round(x [, digits]), ceil, floor, abs,
+ * sqrt, clamp(x, lo, hi), if(cond, whenTrue, whenFalse). Division by zero gives Infinity
+ * and an empty input gives NaN; the renderer prints both as "—".
+ */
+
+export class FormulaError extends Error {
+  constructor(
+    message: string,
+    public readonly position: number,
+  ) {
+    super(message);
+    this.name = "FormulaError";
+  }
+}
+
+export type Ast =
+  | { t: "num"; v: number }
+  | { t: "id"; name: string; pos: number }
+  | { t: "neg"; a: Ast }
+  | { t: "bin"; op: "+" | "-" | "*" | "/" | "%" | "^" | "<" | "<=" | ">" | ">=" | "==" | "!="; a: Ast; b: Ast }
+  | { t: "call"; fn: string; args: Ast[]; pos: number };
+
+type Token = { kind: "num"; value: number; pos: number } | { kind: "id"; value: string; pos: number } | { kind: "op"; value: string; pos: number } | { kind: "end"; pos: number };
+
+export const FUNCTIONS: Record<string, { arity: [number, number]; fn: (...a: number[]) => number }> = {
+  min: { arity: [1, 64], fn: (...a) => Math.min(...a) },
+  max: { arity: [1, 64], fn: (...a) => Math.max(...a) },
+  round: {
+    arity: [1, 2],
+    fn: (x, digits = 0) => {
+      const m = 10 ** Math.max(0, Math.floor(digits));
+      return Math.round((x + Number.EPSILON) * m) / m;
+    },
+  },
+  ceil: { arity: [1, 1], fn: (x) => Math.ceil(x) },
+  floor: { arity: [1, 1], fn: (x) => Math.floor(x) },
+  abs: { arity: [1, 1], fn: (x) => Math.abs(x) },
+  sqrt: { arity: [1, 1], fn: (x) => Math.sqrt(x) },
+  clamp: { arity: [3, 3], fn: (x, lo, hi) => Math.min(Math.max(x, lo), hi) },
+  if: { arity: [3, 3], fn: (c, a, b) => (c ? a : b) },
+};
+
+const TWO_CHAR_OPS = new Set(["<=", ">=", "==", "!="]);
+const ONE_CHAR_OPS = new Set(["+", "-", "*", "/", "%", "^", "(", ")", ",", "<", ">"]);
+
+function tokenize(src: string): Token[] {
+  const out: Token[] = [];
+  let i = 0;
+  while (i < src.length) {
+    const c = src[i];
+    if (/\s/.test(c)) {
+      i++;
+      continue;
+    }
+    const two = src.slice(i, i + 2);
+    if (TWO_CHAR_OPS.has(two)) {
+      out.push({ kind: "op", value: two, pos: i });
+      i += 2;
+      continue;
+    }
+    if (ONE_CHAR_OPS.has(c)) {
+      out.push({ kind: "op", value: c, pos: i });
+      i++;
+      continue;
+    }
+    const num = /^(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?/i.exec(src.slice(i));
+    if (num) {
+      out.push({ kind: "num", value: Number(num[0]), pos: i });
+      i += num[0].length;
+      continue;
+    }
+    const id = /^[A-Za-z_][A-Za-z0-9_]*/.exec(src.slice(i));
+    if (id) {
+      out.push({ kind: "id", value: id[0], pos: i });
+      i += id[0].length;
+      continue;
+    }
+    throw new FormulaError(`Unexpected character "${c}"`, i);
+  }
+  out.push({ kind: "end", pos: src.length });
+  return out;
+}
+
+class Parser {
+  private i = 0;
+  constructor(private readonly tokens: Token[]) {}
+
+  private peek(): Token {
+    return this.tokens[this.i];
+  }
+  private next(): Token {
+    return this.tokens[this.i++];
+  }
+  private isOp(value: string): boolean {
+    const t = this.peek();
+    return t.kind === "op" && t.value === value;
+  }
+  private expectOp(value: string): void {
+    const t = this.next();
+    if (t.kind !== "op" || t.value !== value) throw new FormulaError(`Expected "${value}"`, t.pos);
+  }
+
+  parse(): Ast {
+    const ast = this.comparison();
+    const t = this.peek();
+    if (t.kind !== "end") throw new FormulaError(`Unexpected "${t.kind === "op" || t.kind === "id" ? t.value : t.kind === "num" ? t.value : ""}"`, t.pos);
+    return ast;
+  }
+
+  private comparison(): Ast {
+    let a = this.additive();
+    for (;;) {
+      const t = this.peek();
+      if (t.kind === "op" && (t.value === "<" || t.value === "<=" || t.value === ">" || t.value === ">=" || t.value === "==" || t.value === "!=")) {
+        this.next();
+        a = { t: "bin", op: t.value, a, b: this.additive() };
+      } else return a;
+    }
+  }
+
+  private additive(): Ast {
+    let a = this.term();
+    for (;;) {
+      if (this.isOp("+") || this.isOp("-")) {
+        const op = (this.next() as { value: "+" | "-" }).value;
+        a = { t: "bin", op, a, b: this.term() };
+      } else return a;
+    }
+  }
+
+  private term(): Ast {
+    let a = this.unary();
+    for (;;) {
+      if (this.isOp("*") || this.isOp("/") || this.isOp("%")) {
+        const op = (this.next() as { value: "*" | "/" | "%" }).value;
+        a = { t: "bin", op, a, b: this.unary() };
+      } else return a;
+    }
+  }
+
+  // Unary minus binds looser than ^ ("-2 ^ 2" is -4), and the exponent may itself be signed ("2 ^ -1").
+  private unary(): Ast {
+    if (this.isOp("-")) {
+      this.next();
+      return { t: "neg", a: this.unary() };
+    }
+    if (this.isOp("+")) {
+      this.next();
+      return this.unary();
+    }
+    return this.power();
+  }
+
+  private power(): Ast {
+    const a = this.primary();
+    if (this.isOp("^")) {
+      this.next();
+      return { t: "bin", op: "^", a, b: this.unary() };
+    }
+    return a;
+  }
+
+  private primary(): Ast {
+    const t = this.next();
+    if (t.kind === "num") return { t: "num", v: t.value };
+    if (t.kind === "id") {
+      if (this.isOp("(")) {
+        this.next();
+        const args: Ast[] = [];
+        if (!this.isOp(")")) {
+          args.push(this.comparison());
+          while (this.isOp(",")) {
+            this.next();
+            args.push(this.comparison());
+          }
+        }
+        this.expectOp(")");
+        const fn = FUNCTIONS[t.value];
+        if (!fn) throw new FormulaError(`Unknown function "${t.value}"`, t.pos);
+        if (args.length < fn.arity[0] || args.length > fn.arity[1]) {
+          throw new FormulaError(`${t.value}() takes ${fn.arity[0] === fn.arity[1] ? fn.arity[0] : `${fn.arity[0]} to ${fn.arity[1]}`} argument(s)`, t.pos);
+        }
+        return { t: "call", fn: t.value, args, pos: t.pos };
+      }
+      return { t: "id", name: t.value, pos: t.pos };
+    }
+    if (t.kind === "op" && t.value === "(") {
+      const inner = this.comparison();
+      this.expectOp(")");
+      return inner;
+    }
+    throw new FormulaError(t.kind === "end" ? "Unexpected end of formula" : `Unexpected "${t.value}"`, t.pos);
+  }
+}
+
+/** Parses once; throws FormulaError with the character position when the text is not a formula. */
+export function parseFormula(src: string): Ast {
+  if (!src.trim()) throw new FormulaError("Empty formula", 0);
+  return new Parser(tokenize(src)).parse();
+}
+
+/** Names the formula reads, in order of first use. */
+export function formulaIdentifiers(ast: Ast): string[] {
+  const out: string[] = [];
+  const walk = (n: Ast) => {
+    switch (n.t) {
+      case "id":
+        if (!out.includes(n.name)) out.push(n.name);
+        break;
+      case "neg":
+        walk(n.a);
+        break;
+      case "bin":
+        walk(n.a);
+        walk(n.b);
+        break;
+      case "call":
+        n.args.forEach(walk);
+        break;
+      default:
+        break;
+    }
+  };
+  walk(ast);
+  return out;
+}
+
+export type Scope = Record<string, number>;
+
+export function evaluateAst(ast: Ast, scope: Scope): number {
+  switch (ast.t) {
+    case "num":
+      return ast.v;
+    case "id": {
+      // Own properties only: "toString" or "__proto__" must never resolve through the prototype.
+      if (!Object.prototype.hasOwnProperty.call(scope, ast.name)) throw new FormulaError(`Unknown name "${ast.name}"`, ast.pos);
+      return scope[ast.name];
+    }
+    case "neg":
+      return -evaluateAst(ast.a, scope);
+    case "bin": {
+      const a = evaluateAst(ast.a, scope);
+      const b = evaluateAst(ast.b, scope);
+      switch (ast.op) {
+        case "+":
+          return a + b;
+        case "-":
+          return a - b;
+        case "*":
+          return a * b;
+        case "/":
+          return a / b;
+        case "%":
+          return a % b;
+        case "^":
+          return a ** b;
+        case "<":
+          return a < b ? 1 : 0;
+        case "<=":
+          return a <= b ? 1 : 0;
+        case ">":
+          return a > b ? 1 : 0;
+        case ">=":
+          return a >= b ? 1 : 0;
+        case "==":
+          return a === b ? 1 : 0;
+        case "!=":
+          return a !== b ? 1 : 0;
+        default:
+          return NaN;
+      }
+    }
+    case "call": {
+      const fn = FUNCTIONS[ast.fn];
+      if (!fn) throw new FormulaError(`Unknown function "${ast.fn}"`, ast.pos);
+      return fn.fn(...ast.args.map((a) => evaluateAst(a, scope)));
+    }
+    default:
+      return NaN;
+  }
+}
+
+export interface CompiledFormula {
+  source: string;
+  identifiers: string[];
+  evaluate(scope: Scope): number;
+}
+
+/** Parse + identifiers in one step; the tool views compile every formula once per tool. */
+export function compileFormula(src: string): CompiledFormula {
+  const ast = parseFormula(src);
+  return { source: src, identifiers: formulaIdentifiers(ast), evaluate: (scope) => evaluateAst(ast, scope) };
+}
+
+/** One-shot helper for tests and scripts. */
+export function evaluateFormula(src: string, scope: Scope = {}): number {
+  return evaluateAst(parseFormula(src), scope);
+}
+
+/** "yesno": a comparison result (non-zero = Yes). "precise": up to four decimals, for ratios like 0.5625. */
+export type OutputFormat = "usd" | "pct" | "int" | "seconds" | "words" | "number" | "precise" | "yesno";
+
+/** Human formatting for computed values; non-finite values print as an em dash. */
+export function formatValue(value: number, format: OutputFormat): string {
+  if (!Number.isFinite(value)) return "—";
+  const us = (n: number, max: number) => n.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: max });
+  switch (format) {
+    case "usd": {
+      const abs = Math.abs(value);
+      const body = Number.isInteger(abs) ? us(abs, 0) : abs.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      return `${value < 0 ? "−" : ""}$${body}`;
+    }
+    case "pct":
+      return `${us(value, 1)}%`;
+    case "int":
+      return us(Math.round(value), 0);
+    case "seconds":
+      return `${us(value, 1)} s`;
+    case "words": {
+      const n = Math.round(value);
+      return `${us(n, 0)} ${n === 1 ? "word" : "words"}`;
+    }
+    case "precise":
+      return us(value, 4);
+    case "yesno":
+      return value !== 0 ? "Yes" : "No";
+    default:
+      return us(value, 2);
+  }
+}

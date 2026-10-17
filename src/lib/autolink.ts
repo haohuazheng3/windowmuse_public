@@ -1,8 +1,8 @@
 /*
  * Automatic internal links for article bodies (a rehype plugin, pure so it is unit-testable).
  * The first occurrence of each known phrase in running text becomes a link to its article,
- * hub or product page. Never inside headings, links, code or figure captions; never a link
- * to the page itself; one link per phrase and per destination; at most `max` links per article.
+ * hub or product page. Never inside headings, links (including the <ToolLink> and <DataPoint>
+ * components), code or figure captions; never a link to the page itself; one link per phrase and per destination; at most `max` links per article.
  */
 
 export type HastText = { type: "text"; value: string };
@@ -18,6 +18,17 @@ export interface AutolinkOptions {
 }
 
 const SKIP_TAGS = new Set(["a", "h1", "h2", "h3", "h4", "h5", "h6", "code", "pre", "figcaption", "button", "summary"]);
+/** MDX components whose children already are (or sit beside) a link: a second <a> inside them would nest anchors. */
+const SKIP_JSX = new Set(["ToolLink", "Link", "DataPoint", "StudioCTA", "LabelReminder"]);
+
+function isSkippedNode(node: HastNode): boolean {
+  if (node.type === "element") return SKIP_TAGS.has((node as HastElement).tagName);
+  if (node.type === "mdxJsxTextElement" || node.type === "mdxJsxFlowElement") {
+    const name = (node as { name?: string | null }).name;
+    return typeof name === "string" && SKIP_JSX.has(name);
+  }
+  return false;
+}
 
 function escapeRegExp(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -40,7 +51,7 @@ export function rehypeAutolink(options: AutolinkOptions) {
 
     const walk = (node: HastNode, inSkip: boolean) => {
       if (added >= max || !hasChildren(node)) return;
-      const skip = inSkip || (node.type === "element" && SKIP_TAGS.has((node as HastElement).tagName));
+      const skip = inSkip || isSkippedNode(node);
       const children = node.children;
       for (let i = 0; i < children.length; i++) {
         if (added >= max) return;

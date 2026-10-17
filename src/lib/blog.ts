@@ -45,7 +45,14 @@ export interface Post {
   featured: boolean;
   draft: boolean;
   faq: PostFaq[];
+  /** Cover image (shown above the body on article pages without a tool; the share image everywhere). */
   image: PostImage | null;
+  /** In-body photos, rendered by `<Figure n={1} />` (1-based) in the MDX. */
+  images: PostImage[];
+  /** Tool-first page: id of the interactive tool (content/tools/<id>.json) shown above the article. */
+  tool: string | null;
+  /** Page level from the keyword plan: A = tool-first (short body), B = article. Read by scripts/ops/seo-qa.mjs only. */
+  level: "A" | "B";
   body: string;
   format: "md" | "mdx";
   wordCount: number;
@@ -128,10 +135,12 @@ export function countWords(body: string): number {
   return text.split(/\s+/).filter((w) => /[\p{L}\p{N}]/u.test(w)).length;
 }
 
-function parseFile(category: string, slug: string, format: "md" | "mdx", raw: string): Post {
+/** One article file → Post (exported for tests; the loader calls it per file). */
+export function parsePost(category: string, slug: string, format: "md" | "mdx", raw: string): Post {
   const { data, content } = matter(raw);
   const published = toIsoDate(data.publishedAt, "2099-01-01");
   const words = countWords(content);
+  const images = Array.isArray(data.images) ? data.images.map(toImage).filter((i): i is PostImage => i !== null) : [];
   return {
     slug,
     category,
@@ -144,6 +153,9 @@ function parseFile(category: string, slug: string, format: "md" | "mdx", raw: st
     draft: data.draft === true,
     faq: toFaq(data.faq),
     image: toImage(data.image),
+    images,
+    tool: typeof data.tool === "string" && data.tool.trim() ? data.tool.trim() : null,
+    level: data.level === "A" ? "A" : "B",
     body: content,
     format,
     wordCount: words,
@@ -164,7 +176,7 @@ function load(): Post[] {
         const m = /^([a-z0-9][a-z0-9-]*)\.(mdx?)$/.exec(f);
         if (!m) continue;
         const raw = fs.readFileSync(path.join(dir, f), "utf8");
-        posts.push(parseFile(cat.name, m[1], m[2] === "md" ? "md" : "mdx", raw));
+        posts.push(parsePost(cat.name, m[1], m[2] === "md" ? "md" : "mdx", raw));
       }
     }
   }
@@ -206,6 +218,18 @@ export function getPost(category: string, slug: string, opts: { includeDrafts?: 
 
 export function postUrl(post: Pick<Post, "category" | "slug">): string {
   return `/blog/${post.category}/${post.slug}`;
+}
+
+/**
+ * tool id → URL of the public page that hosts it, for `<ToolLink id="…">` in article bodies.
+ * Drafts and scheduled pages are included only when `includeDrafts` is set (admin preview).
+ */
+export function toolRoutes(opts: { includeDrafts?: boolean } = {}): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const p of opts.includeDrafts ? load() : publishedPosts()) {
+    if (p.tool && !(p.tool in out)) out[p.tool] = postUrl(p);
+  }
+  return out;
 }
 
 /** Number of hub pages a category needs (at least 1, so the hub itself always exists). */

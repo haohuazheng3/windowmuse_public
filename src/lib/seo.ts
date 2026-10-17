@@ -172,6 +172,28 @@ export function articleLd(post: ArticleInput, url: string) {
   };
 }
 
+/**
+ * The interactive tool on a tool-first guide. Free, in the browser, published by the
+ * organization; `url` is the article page the tool lives on.
+ */
+export function webApplicationLd(input: { name: string; description: string; url: string }) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    name: input.name,
+    description: input.description,
+    url: absoluteUrl(input.url),
+    applicationCategory: "BusinessApplication",
+    operatingSystem: "Any",
+    browserRequirements: "Requires JavaScript",
+    isAccessibleForFree: true,
+    inLanguage: "en",
+    offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+    publisher: { "@id": ORG_ID },
+    isPartOf: { "@id": SITE_ID },
+  };
+}
+
 export interface HowToStep {
   name: string;
   text: string;

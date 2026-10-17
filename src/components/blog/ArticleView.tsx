@@ -3,11 +3,14 @@ import Image from "next/image";
 import { Breadcrumbs, Container, CtaPane, FaqList } from "@/components/ui";
 import { JsonLd } from "@/components/JsonLd";
 import { LogoMark } from "@/components/Logo";
-import { BLOG_COMPONENTS } from "@/components/blog/Blocks";
+import { articleComponents } from "@/components/blog/Blocks";
+import { ToolCtaStrip } from "@/components/tools/ToolCta";
+import { ToolRunner } from "@/components/tools/ToolRunner";
 import { categoryBySlug } from "@/content/categories";
-import { autolinkTerms, postUrl, relatedPosts, type Post, type PostHeading } from "@/lib/blog";
+import { getTool } from "@/content/tools";
+import { autolinkTerms, postUrl, relatedPosts, toolRoutes, type Post, type PostHeading } from "@/lib/blog";
 import { renderMdx } from "@/lib/mdx";
-import { articleLd, faqLd } from "@/lib/seo";
+import { absoluteUrl, articleLd, faqLd, webApplicationLd } from "@/lib/seo";
 import { SITE } from "@/lib/site";
 
 export function formatDate(iso: string): string {
@@ -57,17 +60,33 @@ function Meta({ post }: { post: Post }) {
  * The article template: breadcrumbs, header with visible dates, optional cover, table of
  * contents (inline on phones, sticky on desktop), the MDX body in one pane, FAQ, the studio
  * call to action and related guides. Article + FAQPage JSON-LD only on public renders.
+ *
+ * Tool-first pages (frontmatter `tool: <id>`): the interactive tool sits in its own pane
+ * right under the title, followed by the studio strip, then the article; the cover image is
+ * skipped (use `<Figure n={1} />` in the body) and WebApplication JSON-LD is added.
  */
 export async function ArticleView({ post, preview = false }: { post: Post; preview?: boolean }) {
   const cat = categoryBySlug(post.category);
   const url = postUrl(post);
-  const body = await renderMdx(post.body, { format: post.format, components: BLOG_COMPONENTS, autolink: autolinkTerms(), self: url });
+  const tool = getTool(post.tool);
+  if (post.tool && !tool) throw new Error(`${url}: frontmatter names tool "${post.tool}" but content/tools/${post.tool}.json does not exist`);
+  const body = await renderMdx(post.body, {
+    format: post.format,
+    components: articleComponents({ images: post.images, toolRoutes: toolRoutes({ includeDrafts: preview }) }),
+    autolink: autolinkTerms(),
+    self: url,
+  });
   const related = relatedPosts(post, 3);
   const showToc = post.headings.length >= 3;
+  const ld = [
+    articleLd(post, url),
+    ...(tool ? [webApplicationLd({ name: tool.schemaName ?? tool.title, description: tool.lede, url })] : []),
+    ...(post.faq.length ? [faqLd(post.faq)] : []),
+  ];
 
   return (
     <>
-      {!preview ? <JsonLd data={[articleLd(post, url), ...(post.faq.length ? [faqLd(post.faq)] : [])]} /> : null}
+      {!preview ? <JsonLd data={ld} /> : null}
       <Container className="pt-8 sm:pt-12">
         {preview ? (
           <p className="mb-4 flex flex-wrap items-center gap-2 text-[0.86rem] text-ink-3">
@@ -76,6 +95,7 @@ export async function ArticleView({ post, preview = false }: { post: Post; previ
           </p>
         ) : null}
         <Breadcrumbs
+          compact={Boolean(tool)}
           items={[
             { name: "Blog", path: "/blog" },
             ...(cat ? [{ name: cat.name, path: `/blog/${cat.slug}` }] : []),
@@ -90,12 +110,21 @@ export async function ArticleView({ post, preview = false }: { post: Post; previ
                   {cat.name}
                 </Link>
               ) : null}
-              <h1 className="display mt-4 text-[2.2rem] text-ink sm:text-[3.1rem]">{post.title}</h1>
+              <h1 className={`display mt-4 text-ink ${tool ? "text-[2rem] sm:text-[2.7rem]" : "text-[2.2rem] sm:text-[3.1rem]"}`}>{post.title}</h1>
               {post.description ? <p className="dek mt-4 text-[1.18rem] leading-snug">{post.description}</p> : null}
               <Meta post={post} />
             </header>
 
-            {post.image ? (
+            {tool ? (
+              <>
+                <div className="pane mt-8 px-5 py-6 sm:px-8 sm:py-8">
+                  <ToolRunner tool={tool} pageUrl={absoluteUrl(url)} />
+                </div>
+                <div className="mt-6">
+                  <ToolCtaStrip tool={tool} />
+                </div>
+              </>
+            ) : post.image ? (
               <figure className="pane mt-8 overflow-hidden p-2">
                 <Image
                   src={post.image.src}
