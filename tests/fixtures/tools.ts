@@ -114,4 +114,27 @@ export const FIXTURES: ToolByKind = {
       { heading: "Disclosure", template: "Turn on the paid partnership label.", when: { input: "paid", is: "true" } },
     ],
   },
+  teleprompter: {
+    id: "prompter",
+    kind: "teleprompter",
+    title: "Teleprompter",
+    lede: "Paste a script and read it at your pace.",
+    input: { label: "Script", placeholder: "Paste your script", maxLength: 20000 },
+    wpm: { default: 150, min: 80, max: 220 },
+  },
+  overlay: {
+    id: "safe-zone",
+    kind: "overlay",
+    title: "Safe zone overlay",
+    lede: "Where the app covers a vertical video.",
+    width: 1080,
+    height: 1920,
+    inputs: [{ id: "longCaption", type: "toggle", label: "Long caption" }],
+    zones: [
+      { id: "top", label: "Top tabs", x: 0, y: 0, w: 100, h: 7, tone: "ui" },
+      { id: "caption", label: "Caption", x: 0, y: 82, w: 86, h: 18, tone: "ui", when: { input: "longCaption", is: "false" } },
+      { id: "caption-long", label: "Caption", x: 0, y: 76, w: 86, h: 24, tone: "ui", when: { input: "longCaption", is: "true" } },
+      { id: "safe", label: "Safe area", x: 6, y: 9, w: 78, h: 64, tone: "safe" },
+    ],
+  },
 };

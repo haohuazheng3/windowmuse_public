@@ -8,7 +8,9 @@ import { ChecklistView } from "./Checklist";
 import { ConverterView } from "./Converter";
 import { DecisionView } from "./Decision";
 import { GeneratorView } from "./Generator";
+import { OverlayView } from "./Overlay";
 import { QuizView } from "./Quiz";
+import { TeleprompterView } from "./Teleprompter";
 import { useHydrated } from "./shared";
 
 /*
@@ -59,6 +61,10 @@ export function ToolRunner({ tool, pageUrl }: { tool: Tool; pageUrl: string }) {
           <DecisionView tool={tool} />
         ) : tool.kind === "checklist" ? (
           <ChecklistView tool={tool} />
+        ) : tool.kind === "teleprompter" ? (
+          <TeleprompterView tool={tool} />
+        ) : tool.kind === "overlay" ? (
+          <OverlayView tool={tool} />
         ) : (
           <BriefView tool={tool} />
         )}

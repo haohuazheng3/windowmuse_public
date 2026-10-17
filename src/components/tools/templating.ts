@@ -80,6 +80,32 @@ function capitalize(s: string): string {
   return s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
 }
 
+function withArticle(s: string): string {
+  if (!s) return s;
+  const first = s.split(/\s+/)[0];
+  // Acronyms are read letter by letter ("an LED", "a USB"); numbers by their sound ("an 8", "an 11").
+  const an = /^[A-Z0-9]{2,}$/.test(first) || /^\d/.test(first)
+    ? /^(?:[AEFHILMNORSX8]|11|18)/.test(first)
+    : (/^[aeiou]/i.test(s) && !/^(?:uni|use|usu|eu|one|once|ure)/i.test(s)) || /^(?:hour|honest|heir|honou?r)/i.test(s);
+  return `${an ? "an" : "a"} ${s}`;
+}
+
+const SMALL_WORDS = new Set(["a", "an", "the", "and", "or", "but", "for", "nor", "at", "by", "in", "of", "on", "to", "up", "as", "with", "from", "via", "vs"]);
+
+function titleCase(s: string): string {
+  return s
+    .split(/(\s+)/)
+    .map((word, i) => {
+      if (/^\s+$/.test(word) || !word) return word;
+      const lower = word.toLowerCase();
+      if (i > 0 && SMALL_WORDS.has(lower)) return lower;
+      // Keep units and mixed-case tokens such as "cm", "oz", "iPhone" as typed.
+      if (/^(?:cm|mm|ml|oz|in|ft|kg|g|lb|lbs|l)$/i.test(word) || /[a-z][A-Z]/.test(word)) return word;
+      return word.charAt(0).toUpperCase() + word.slice(1);
+    })
+    .join("");
+}
+
 function joinList(items: string[]): string {
   if (items.length <= 1) return items.join("");
   if (items.length === 2) return `${items[0]} and ${items[1]}`;
@@ -97,6 +123,10 @@ export const FILTERS: Record<string, (value: TemplateValue) => string> = {
   upper: (v) => toText(v).toUpperCase(),
   /** First letter upper-case, the rest untouched: "keeps ice 24 h" → "Keeps ice 24 h" */
   cap: (v) => capitalize(toText(v)),
+  /** With the right indefinite article: "insulated bottle" → "an insulated bottle", "lunch box" → "a lunch box". */
+  a: (v) => withArticle(toText(v)),
+  /** Title case: each word capitalised except short articles, conjunctions and prepositions after the first. */
+  title: (v) => titleCase(toText(v)),
   /** First item or textarea line. */
   first: (v) => splitLines(v)[0] ?? "",
   /** Second item or line ("" when there is none). */

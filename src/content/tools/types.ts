@@ -37,7 +37,7 @@ import { z } from "zod";
 import { compileFormula, FormulaError, type OutputFormat } from "@/components/tools/formulas";
 import { invalidRanges, placeholderIds, unknownFilters } from "@/components/tools/templating";
 
-export const TOOL_KINDS = ["generator", "calculator", "converter", "checker", "quiz", "decision", "checklist", "brief"] as const;
+export const TOOL_KINDS = ["generator", "calculator", "converter", "checker", "quiz", "decision", "checklist", "brief", "teleprompter", "overlay"] as const;
 export type ToolKind = (typeof TOOL_KINDS)[number];
 
 export const DEFAULT_CTA_HREF = "/sign-in?redirect_url=/studio/new";
@@ -380,7 +380,44 @@ export interface BriefTool extends ToolBase {
   sections: BriefSection[];
 }
 
-export type Tool = GeneratorTool | CalculatorTool | ConverterTool | CheckerTool | QuizTool | DecisionTool | ChecklistTool | BriefTool;
+/* ─────────────────────────── teleprompter ─────────────────────────── */
+
+/** A script box and a scrolling prompter that moves at a chosen words-per-minute pace. */
+export interface TeleprompterTool extends ToolBase {
+  kind: "teleprompter";
+  input: { label: string; placeholder?: string; default?: string; maxLength?: number };
+  /** Words per minute: starting value and the slider's range. */
+  wpm: { default: number; min: number; max: number };
+}
+
+/* ─────────────────────────── overlay ─────────────────────────── */
+
+export interface OverlayZone {
+  id: string;
+  label: string;
+  /** Position and size as percentages of the frame (0–100). */
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  /** "ui" = covered by the app interface; "safe" = where key content belongs. */
+  tone: "ui" | "safe";
+  /** Show only when the toggles match; a list means every condition must hold. */
+  when?: When | When[];
+}
+
+/** A frame preview with interface zones, toggles that change them, and PNG/SVG downloads of the overlay. */
+export interface OverlayTool extends ToolBase {
+  kind: "overlay";
+  /** Frame size in pixels, e.g. 1080 × 1920. */
+  width: number;
+  height: number;
+  inputs: ToggleInput[];
+  zones: OverlayZone[];
+  note?: string;
+}
+
+export type Tool = GeneratorTool | CalculatorTool | ConverterTool | CheckerTool | QuizTool | DecisionTool | ChecklistTool | BriefTool | TeleprompterTool | OverlayTool;
 
 /* ═══════════════════════════ zod schema ═══════════════════════════ */
 
@@ -575,6 +612,26 @@ const briefSchema = z.strictObject({
   sections: z.array(z.strictObject({ heading: z.string().min(1), template: z.string().min(1), when: when.optional() })).min(1),
 });
 
+const teleprompterSchema = z.strictObject({
+  ...toolBase,
+  kind: z.literal("teleprompter"),
+  input: z.strictObject({ label: z.string().min(1), placeholder: z.string().optional(), default: z.string().optional(), maxLength: z.number().int().positive().optional() }),
+  wpm: z.strictObject({ default: z.number().positive(), min: z.number().positive(), max: z.number().positive() }),
+});
+
+const pct = z.number().min(0).max(100);
+const overlaySchema = z.strictObject({
+  ...toolBase,
+  kind: z.literal("overlay"),
+  width: z.number().int().positive().max(8192),
+  height: z.number().int().positive().max(8192),
+  inputs: z.array(toggleInput),
+  zones: z
+    .array(z.strictObject({ id: z.string().regex(/^[a-z0-9][a-z0-9-]*$/, "zone id: lower-case letters, digits and hyphens"), label: z.string().min(1), x: pct, y: pct, w: pct, h: pct, tone: z.enum(["ui", "safe"]), when: when.optional() }))
+    .min(1),
+  note: z.string().optional(),
+});
+
 /* ─────────────────────────── cross-field rules ─────────────────────────── */
 
 type Ctx = z.RefinementCtx;
@@ -751,8 +808,25 @@ function refineBrief(t: z.infer<typeof briefSchema>, ctx: Ctx) {
   });
 }
 
+function refineTeleprompter(t: z.infer<typeof teleprompterSchema>, ctx: Ctx) {
+  if (t.wpm.min > t.wpm.max) issue(ctx, "wpm.min must not exceed wpm.max", ["wpm"]);
+  if (t.wpm.default < t.wpm.min || t.wpm.default > t.wpm.max) issue(ctx, "wpm.default must lie between min and max", ["wpm", "default"]);
+}
+
+function refineOverlay(t: z.infer<typeof overlaySchema>, ctx: Ctx) {
+  const ids = checkInputs(t.inputs, ctx, "inputs");
+  const seen = new Set<string>();
+  t.zones.forEach((z, i) => {
+    if (seen.has(z.id)) issue(ctx, `duplicate zone id "${z.id}"`, ["zones", i, "id"]);
+    seen.add(z.id);
+    if (z.x + z.w > 100.0001) issue(ctx, "x + w must not exceed 100", ["zones", i]);
+    if (z.y + z.h > 100.0001) issue(ctx, "y + h must not exceed 100", ["zones", i]);
+    checkWhen(z.when, ids, ctx, ["zones", i, "when"]);
+  });
+}
+
 export const ToolSchema = z
-  .discriminatedUnion("kind", [generatorSchema, calculatorSchema, converterSchema, checkerSchema, quizSchema, decisionSchema, checklistSchema, briefSchema])
+  .discriminatedUnion("kind", [generatorSchema, calculatorSchema, converterSchema, checkerSchema, quizSchema, decisionSchema, checklistSchema, briefSchema, teleprompterSchema, overlaySchema])
   .superRefine((t, ctx) => {
     switch (t.kind) {
       case "generator":
@@ -769,6 +843,10 @@ export const ToolSchema = z
         return refineDecision(t, ctx);
       case "brief":
         return refineBrief(t, ctx);
+      case "teleprompter":
+        return refineTeleprompter(t, ctx);
+      case "overlay":
+        return refineOverlay(t, ctx);
       default:
         return;
     }

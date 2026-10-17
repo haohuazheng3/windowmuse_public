@@ -46,6 +46,11 @@ describe("placeholders", () => {
     expect(renderTemplate("{{points|bullets}}", values).text).toBe("- keeps ice 24 h\n- one-hand lid\n- dishwasher safe");
     expect(renderTemplate("{{points|tags}}", values).text).toBe("#KeepsIce24H #OneHandLid #DishwasherSafe");
     expect(renderTemplate("{{points|capbullets}}", values).text).toBe("- Keeps ice 24 h\n- One-hand lid\n- Dishwasher safe");
+    expect(renderTemplate("{{t|title}}", { t: "the lunch box that folds to 2 cm flat" }).text).toBe("The Lunch Box That Folds to 2 cm Flat");
+    expect(renderTemplate("{{t|a}}", { t: "insulated bottle" }).text).toBe("an insulated bottle");
+    expect(renderTemplate("{{t|a}}", { t: "lunch box" }).text).toBe("a lunch box");
+    expect(renderTemplate("{{t|a}}", { t: "USB lamp" }).text).toBe("a USB lamp");
+    expect(renderTemplate("{{t|a}}", { t: "LED lamp" }).text).toBe("an LED lamp");
     expect(renderTemplate("{{points|first|tag}}", values).text).toBe("#KeepsIce24H");
     expect(FILTERS.cap("")).toBe("");
   });
