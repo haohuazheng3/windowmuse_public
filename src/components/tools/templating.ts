@@ -114,6 +114,11 @@ export const FILTERS: Record<string, (value: TemplateValue) => string> = {
     splitLines(v)
       .map((l) => `- ${l}`)
       .join("\n"),
+  /** Bullets with the first letter of each item capitalised (listing bullet points). */
+  capbullets: (v) =>
+    splitLines(v)
+      .map((l) => `- ${capitalize(l)}`)
+      .join("\n"),
   /** Each item or line as a hashtag, space-separated: "lunch box\nbento" → "#LunchBox #Bento". */
   tags: (v) =>
     splitLines(v)
