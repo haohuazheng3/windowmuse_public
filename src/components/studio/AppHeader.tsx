@@ -4,6 +4,7 @@ import { UserButton, useAuth } from "@clerk/nextjs";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LogoMark, Wordmark } from "@/components/Logo";
+import { useHydrated } from "@/components/use-hydrated";
 import { useMe } from "./me-store";
 
 /*
@@ -44,7 +45,11 @@ function CreditsBadge() {
 
 export function AppHeader() {
   const pathname = usePathname();
-  const { isLoaded, isSignedIn } = useAuth();
+  const { isLoaded: clerkLoaded, isSignedIn } = useAuth();
+  // Clerk may already be loaded from cache when React hydrates; until hydration is done we
+  // render exactly what the server rendered (the "not loaded" state) to avoid a mismatch.
+  const hydrated = useHydrated();
+  const isLoaded = hydrated && clerkLoaded;
   const signedIn = isLoaded && isSignedIn;
 
   const isActive = (href: string, exact: boolean) => (exact ? pathname === href : pathname === href || pathname.startsWith(`${href}/`));

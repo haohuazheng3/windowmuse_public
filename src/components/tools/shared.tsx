@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useId, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { useCallback, useId, useRef, useState, type ReactNode } from "react";
 import { track } from "@/components/Consent";
 import type { InputDef, NumericInputDef, Tool, When } from "@/content/tools/types";
 import { toolCta } from "@/content/tools/types";
@@ -16,16 +16,9 @@ import type { TemplateValues } from "./templating";
 export type InputValue = string | number | boolean | string[] | null;
 export type Values = Record<string, InputValue>;
 
-const subscribeNoop = () => () => {};
 
 /** false on the server and during hydration, true once React owns the DOM. */
-export function useHydrated(): boolean {
-  return useSyncExternalStore(
-    subscribeNoop,
-    () => true,
-    () => false,
-  );
-}
+export { useHydrated } from "@/components/use-hydrated";
 
 /** FlowGlance events: `used` fires once per mount, `result` and `cta` whenever called. */
 export function useToolEvents(tool: Pick<Tool, "id" | "kind">) {
