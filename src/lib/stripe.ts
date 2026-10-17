@@ -42,6 +42,28 @@ export function stripeMode(): "live" | "test" | "missing" {
   return key.includes("_test_") ? "test" : "live";
 }
 
+/**
+ * When Stripe refused a call because the API key lacks a permission (HTTP 403, the SDK's
+ * `StripePermissionError`; with an organization key, each account's permissions are granted
+ * separately), the short reason to record, e.g. "invoice_read (Invoices Read)". Null for every
+ * other error, which stays a real failure.
+ */
+export function stripePermissionProblem(err: unknown): string | null {
+  if (typeof err !== "object" || err === null) return null;
+  const e = err as { type?: unknown; statusCode?: unknown; code?: unknown; message?: unknown };
+  const message = typeof e.message === "string" ? e.message : "";
+  const denied =
+    e.type === "StripePermissionError" ||
+    e.statusCode === 403 ||
+    e.code === "permission_denied" ||
+    /does not have the required permissions|^Permission denied\b/i.test(message);
+  if (!denied) return null;
+  // "… Enabling Invoices Read ('invoice_read') permissions on this key would allow this request to continue."
+  const m = /Enabling (.+?) \('([a-z0-9_]+)'\) permissions?/i.exec(message);
+  if (m) return `${m[2]} (${m[1].trim()})`;
+  return message.slice(0, 200) || "permission denied";
+}
+
 /** Tag written into every session's metadata; the webhook ignores sessions from other environments. */
 export function stripeEnvTag(): string {
   return VERCEL_ENV;

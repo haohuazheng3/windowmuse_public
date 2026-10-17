@@ -42,7 +42,7 @@ The production setup is **Vercel** (the Next.js app) + **Neon** (Postgres) + **C
 1. Create a Neon project and put its pooled and direct connection strings in Vercel as `DATABASE_URL` and `DATABASE_URL_UNPOOLED`. `npm run build` applies the migrations before every deployment.
 2. Create a Clerk application and a Stripe account; add their keys and the five Stripe price ids from `.env.example`.
 3. Create an R2 bucket and deploy the two Workers (below). Point `FILES_BASE_URL` at the files Worker and `MAIL_WORKER_URL` at the mail Worker; generate your own values for the shared secrets.
-4. Import the repository into Vercel. `vercel.json` sets the framework and an ignored-build step that skips documentation-only commits.
+4. Create a Vercel project for the repository. `vercel.json` sets the framework, turns Vercel's own Git builds off (`git.deploymentEnabled: false`) and keeps an ignored-build step for documentation-only commits. Production is built by GitHub Actions and uploaded prebuilt (`vercel pull` → `vercel build --prod` → `vercel deploy --prebuilt --prod`; secrets `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`, the public `NEXT_PUBLIC_*` values as repository variables). Optional fallback: a repository webhook (`workflow_run`) to `/api/hooks/github` with `GITHUB_WEBHOOK_SECRET`, which POSTs `VERCEL_DEPLOY_HOOK_URL` when the workflow cannot deploy, so Vercel builds the commit itself.
 
 ### Cloudflare Workers
 

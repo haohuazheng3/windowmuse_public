@@ -31,6 +31,7 @@ interface CronReport {
   expired?: number;
   repaired?: unknown[];
   checked?: number;
+  skipped?: { step?: string; reason?: string }[];
   error?: string;
 }
 
@@ -146,6 +147,9 @@ export default async function DiagnosticsPage() {
                   value: rec?.ranAt ? (
                     <span>
                       {ago(rec.ranAt)} · checked {countOf(rec.checked)} · repaired {countOf(rec.repaired)} · failed {countOf(rec.failed)}
+                      {rec.skipped?.length ? (
+                        <span className="text-ink-3"> · skipped {rec.skipped.map((s) => `${s.step ?? "?"} (${s.reason ?? "permission"})`).join(", ")}</span>
+                      ) : null}
                       {rec.error ? <span className="text-bad"> · {rec.error}</span> : null}
                     </span>
                   ) : recRun?.ranAt ? (

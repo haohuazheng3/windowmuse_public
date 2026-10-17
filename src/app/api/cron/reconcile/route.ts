@@ -12,6 +12,14 @@ export const maxDuration = 120;
 
 const NO_STORE = { "Cache-Control": "no-store" } as const;
 
+/** Named so the inbox groups every run under one entry (fingerprint = name + frame + route). */
+class StripePermissionSkipped extends Error {
+  constructor(skipped: { step: string; reason: string }[]) {
+    super(`Reconcile skipped ${skipped.map((s) => `${s.step}: Stripe key lacks ${s.reason}`).join("; ")}`);
+    this.name = "StripePermissionSkipped";
+  }
+}
+
 /**
  * Daily (Vercel Cron / GitHub Actions, Bearer CRON_SECRET) or on demand: Stripe paid vs
  * database granted over the last `?days=` (default 7, max 90), with repairs. The last
@@ -35,7 +43,18 @@ async function run(req: Request): Promise<Response> {
       checked: report.sessions.scanned + report.invoices.scanned + report.subscriptions.scanned,
       repaired,
       failed,
+      skipped: report.skipped,
     });
+    if (report.skipped.length) {
+      // A step Stripe refused for a missing key permission: one warning per run (grouped in the
+      // inbox, never an email, never a red /api/health); the fix is on the key, not in the code.
+      await captureError(new StripePermissionSkipped(report.skipped), {
+        route: "/api/cron/reconcile",
+        source: "cron",
+        severity: "warn",
+        context: { skipped: report.skipped, days },
+      });
+    }
     if (needsAttention(report)) {
       await notifyOwner({ subject: "Reconcile found differences", text: JSON.stringify(report, null, 2) });
     }
