@@ -20,47 +20,47 @@ export const CATEGORIES: Category[] = [
   {
     slug: "tiktok-shop",
     name: "TikTok Shop Growth",
-    title: "TikTok Shop growth: listings, affiliate videos, and what actually moves sales",
+    title: "TikTok Shop Seller Tools: Fees, ROAS, Listings and Posting",
     description:
-      "Practical guides for TikTok Shop sellers in the US: setting up a shop, product cards and shoppable videos, working with affiliates, pricing rules, and reading the numbers that matter.",
+      "Free TikTok Shop tools and guides for US sellers: fee and ROAS calculators, listing copy, captions, hashtags, posting plans and affiliate marketing.",
     intro:
-      "TikTok Shop rewards sellers who post often, link every video to a product card and keep the listing honest. These guides cover the mechanics: shop setup, shoppable video formats, affiliate programs, promotions that pass review, and the handful of metrics worth watching every week.",
+      "TikTok Shop rewards sellers who post often, link every video to a product card and keep the listing honest. This hub collects free tools for the numbers (fees, break-even ROAS, ROAS), the listing (titles, descriptions, bullet points), the post (captions, hashtags, a posting plan, a shoppable checklist) and the affiliates who sell for you.",
   },
   {
     slug: "ai-video",
     name: "AI Video for Sellers",
-    title: "AI video for sellers: how presenter videos are made, priced and used well",
+    title: "AI Product Video Guides: Inputs, Scripts and Tools",
     description:
-      "How AI presenter videos work for e-commerce: what the models can and cannot do, what photos and scripts produce good results, costs per video, and where AI video fits next to real creators.",
+      "How AI presenter videos work for e-commerce: what inputs they need, how to check a script, when AI UGC fits, and how to choose an AI video tool.",
     intro:
-      "AI presenter video is new enough that most advice is either hype or fear. This hub is the practical middle: what today's video models do well with a real product in hand, what they get wrong, how to brief them, and how to use the output without misleading anyone.",
+      "AI presenter video is new enough that most advice is either hype or fear. This hub is the practical middle: what a generator needs from you, how to check a script before you spend a credit, when AI UGC suits a product and when it does not, and how to pick the right kind of tool.",
   },
   {
     slug: "product-videos",
     name: "Product Video Playbook",
-    title: "Product video playbook: scripts, hooks, angles and the first three seconds",
+    title: "Product Video Tools: Scripts, Hooks, Timing and Specs",
     description:
-      "The craft of short product videos: hooks that stop the scroll, scripts that fit 15 seconds, demo and unboxing structures, which product angles to show, and how to end with a clear call to action.",
+      "Free tools for short product videos: script, hook and CTA generators, timers, speaking-rate and size calculators, safe zones, shot lists and a teleprompter.",
     intro:
-      "A product video has about three seconds to earn the next ten. These guides are about structure: the hook, the one benefit you prove on camera, the angle that shows the product honestly, and the ending that tells people what to tap, in the time a vertical video actually gets.",
+      "A product video has about three seconds to earn the next ten. This hub holds the tools for each step: generators for scripts, hooks, calls to action and titles; timers and calculators for words, seconds, sizes and bitrates; and production helpers such as a shot list, a safe zone overlay and a teleprompter.",
   },
   {
     slug: "compliance",
     name: "Labels, Rules & Trust",
-    title: "AI labels, disclosures and claims: the rules for AI product videos on TikTok",
+    title: "AI Labels and FTC Rules for Product Videos on TikTok",
     description:
-      "What TikTok, TikTok Shop and the FTC require of AI-generated product videos: the AI-generated content label, commercial disclosures, banned claims, fictional presenters, and how to stay on the right side of all of it.",
+      "What TikTok, TikTok Shop and the FTC require of product videos: AI labels, commercial disclosures, banned claims and fake reviews, with free checklists.",
     intro:
-      "TikTok requires realistic AI-generated video to be labeled, the FTC requires endorsements to be truthful and disclosed, and TikTok Shop has its own rules on claims and product footage. This hub explains each rule in plain language and what it means for a seller posting presenter videos.",
+      "TikTok requires realistic AI-generated video to be labelled, the FTC requires endorsements to be truthful and disclosed, and TikTok Shop has its own rules on claims and product footage. This hub explains each rule in plain language and gives you an AI disclosure generator and an FTC checklist to apply them.",
   },
   {
     slug: "creators",
     name: "Creators & UGC",
-    title: "Creators and UGC: working with affiliates, briefs, and when AI fills the gap",
+    title: "UGC and Creator Tools: Briefs, Scripts and Ad Examples",
     description:
-      "Working with TikTok creators and UGC: finding affiliates, writing briefs that get usable videos, paying fairly, judging samples, and where AI presenter videos fit alongside real creators.",
+      "Working with TikTok creators and UGC: creative briefs, UGC ad scripts, script checks, faceless formats, real TikTok ad examples and where AI fits.",
     intro:
-      "Real creators bring trust and reach; AI presenters bring speed and volume. Most shops end up with both. These guides cover finding and briefing affiliates, what good UGC looks like, and how to use AI videos for the long tail without replacing the people who sell for you.",
+      "Real creators bring trust and reach; AI presenters bring speed and volume. Most shops end up with both. This hub covers where UGC comes from, how to brief creators so their videos are usable, scripts that leave room for an honest opinion, faceless formats, and real TikTok campaigns broken down.",
   },
 ];
 
