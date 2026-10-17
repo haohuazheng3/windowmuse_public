@@ -265,7 +265,8 @@ export interface CheckerRule {
 }
 
 /** "seconds@2.5" = spoken length at 2.5 words per second. */
-export type CheckerStat = "words" | "sentences" | "readingLevel" | `seconds@${number}`;
+/** "seconds@2.5" = spoken length at 2.5 words per second; "read@238" = silent reading time at 238 words per minute. */
+export type CheckerStat = "words" | "sentences" | "characters" | "readingLevel" | `seconds@${number}` | `read@${number}`;
 
 /**
  * Textarea → findings grouped by severity with the matches highlighted. "scriptLint" adds
@@ -385,7 +386,7 @@ export type Tool = GeneratorTool | CalculatorTool | ConverterTool | CheckerTool 
 
 const ID = /^[a-z][A-Za-z0-9_]*$/;
 const TOOL_ID = /^[a-z0-9][a-z0-9-]*$/;
-const OUTPUT_FORMATS = ["usd", "pct", "int", "seconds", "words", "number", "precise", "yesno"] as const;
+const OUTPUT_FORMATS = ["usd", "pct", "int", "seconds", "words", "number", "precise", "yesno", "ratio"] as const;
 
 const href = z.string().min(1).refine((h) => h.startsWith("/") || h.startsWith("https://"), "must be a site path (/…) or an https URL");
 const cta = z.strictObject({ label: z.string().min(1), href });
@@ -506,7 +507,16 @@ const checkerRule = z.strictObject({
   suggestion: z.string().optional(),
 });
 
-const checkerStat = z.union([z.literal("words"), z.literal("sentences"), z.literal("readingLevel"), z.custom<`seconds@${number}`>((v) => typeof v === "string" && /^seconds@\d+(\.\d+)?$/.test(v), 'stat: "words", "sentences", "readingLevel" or "seconds@<words per second>"')]);
+const checkerStat = z.union([
+  z.literal("words"),
+  z.literal("sentences"),
+  z.literal("characters"),
+  z.literal("readingLevel"),
+  z.custom<`seconds@${number}` | `read@${number}`>(
+    (v) => typeof v === "string" && /^(?:seconds|read)@\d+(\.\d+)?$/.test(v),
+    'stat: "words", "sentences", "characters", "readingLevel", "seconds@<words per second>" or "read@<words per minute>"',
+  ),
+]);
 
 const checkerSchema = z.strictObject({
   ...toolBase,

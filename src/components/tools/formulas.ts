@@ -53,6 +53,17 @@ export const FUNCTIONS: Record<string, { arity: [number, number]; fn: (...a: num
   sqrt: { arity: [1, 1], fn: (x) => Math.sqrt(x) },
   clamp: { arity: [3, 3], fn: (x, lo, hi) => Math.min(Math.max(x, lo), hi) },
   if: { arity: [3, 3], fn: (c, a, b) => (c ? a : b) },
+  /** Greatest common divisor of two whole numbers (inputs are rounded); gcd(1080, 1920) = 120. */
+  gcd: {
+    arity: [2, 2],
+    fn: (x, y) => {
+      let a = Math.abs(Math.round(x));
+      let b = Math.abs(Math.round(y));
+      if (!Number.isFinite(a) || !Number.isFinite(b)) return NaN;
+      while (b) [a, b] = [b, a % b];
+      return a;
+    },
+  },
 };
 
 const TWO_CHAR_OPS = new Set(["<=", ">=", "==", "!="]);
@@ -312,8 +323,25 @@ export function evaluateFormula(src: string, scope: Scope = {}): number {
   return evaluateAst(parseFormula(src), scope);
 }
 
-/** "yesno": a comparison result (non-zero = Yes). "precise": up to four decimals, for ratios like 0.5625. */
-export type OutputFormat = "usd" | "pct" | "int" | "seconds" | "words" | "number" | "precise" | "yesno";
+/** "yesno": a comparison result (non-zero = Yes). "precise": up to four decimals, for ratios like 0.5625. "ratio": a width ÷ height value printed as its simplest W:H (0.5625 → 9:16). */
+export type OutputFormat = "usd" | "pct" | "int" | "seconds" | "words" | "number" | "precise" | "yesno" | "ratio";
+
+/** Simplest W:H for a positive decimal, by continued fractions (exact for ratios of whole pixel sizes). */
+export function toRatio(x: number): string {
+  if (!Number.isFinite(x) || x <= 0) return "—";
+  let [h1, h0, k1, k0] = [1, 0, 0, 1];
+  let b = x;
+  for (let i = 0; i < 64; i++) {
+    const a = Math.floor(b);
+    [h1, h0] = [a * h1 + h0, h1];
+    [k1, k0] = [a * k1 + k0, k1];
+    if (Math.abs(h1 / k1 - x) <= 1e-9 * Math.max(1, x) || k1 > 100000) break;
+    const frac = b - a;
+    if (frac < 1e-12) break;
+    b = 1 / frac;
+  }
+  return `${h1}:${k1}`;
+}
 
 /** Human formatting for computed values; non-finite values print as an em dash. */
 export function formatValue(value: number, format: OutputFormat): string {
@@ -339,6 +367,8 @@ export function formatValue(value: number, format: OutputFormat): string {
       return us(value, 4);
     case "yesno":
       return value !== 0 ? "Yes" : "No";
+    case "ratio":
+      return toRatio(value);
     default:
       return us(value, 2);
   }

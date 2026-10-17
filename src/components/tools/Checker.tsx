@@ -95,6 +95,14 @@ function Highlighted({ text, findings }: { text: string; findings: CheckerFindin
   return <p className="whitespace-pre-wrap text-[0.98rem] leading-relaxed text-ink-2 [overflow-wrap:anywhere]">{nodes}</p>;
 }
 
+/** 14.6 s under a minute, "3 min 05 s" from a minute up. */
+export function duration(seconds: number): string {
+  if (!Number.isFinite(seconds)) return "—";
+  if (seconds < 60) return `${Math.round(seconds * 10) / 10} s`;
+  const total = Math.round(seconds);
+  return `${Math.floor(total / 60)} min ${String(total % 60).padStart(2, "0")} s`;
+}
+
 export function CheckerView({ tool }: { tool: CheckerTool }) {
   const [text, setText] = useState(tool.input.default ?? "");
   const id = useId();
@@ -110,8 +118,13 @@ export function CheckerView({ tool }: { tool: CheckerTool }) {
       const g = readingGrade(text);
       return { label: "Reading level", value: Number.isFinite(g) ? `Grade ${g}` : "—" };
     }
+    if (s === "characters") return { label: "Characters", value: text.replace(/\n/g, "").length.toLocaleString("en-US") };
+    if (s.startsWith("read@")) {
+      const wpm = Number(s.slice("read@".length));
+      return { label: `Read at ${wpm} words/min`, value: duration((words / wpm) * 60) };
+    }
     const wps = Number(s.slice("seconds@".length));
-    return { label: `Spoken at ${wps} words/s`, value: `${Math.round((words / wps) * 10) / 10} s` };
+    return { label: `Spoken at ${wps} words/s`, value: duration(words / wps) };
   });
 
   const groups = SEVERITY_ORDER.map((sev) => ({ sev, items: findings.filter((f) => f.severity === sev) })).filter((g) => g.items.length);

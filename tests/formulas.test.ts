@@ -78,6 +78,14 @@ describe("formatValue", () => {
   it("formats every output format and shows a dash for non-finite values", () => {
     expect(formatValue(39, "usd")).toBe("$39");
     expect(formatValue(0.5625, "precise")).toBe("0.5625");
+    expect(formatValue(1080 / 1920, "ratio")).toBe("9:16");
+    expect(formatValue(1920 / 1080, "ratio")).toBe("16:9");
+    expect(formatValue(1366 / 768, "ratio")).toBe("683:384");
+    expect(formatValue(1.3333333333, "ratio")).toBe("4:3");
+    expect(formatValue(1, "ratio")).toBe("1:1");
+    expect(formatValue(0, "ratio")).toBe("—");
+    expect(evaluateFormula("gcd(1080, 1920)")).toBe(120);
+    expect(evaluateFormula("1920 / gcd(1080, 1920)")).toBe(16);
     expect(formatValue(1, "yesno")).toBe("Yes");
     expect(formatValue(0, "yesno")).toBe("No");
     expect(formatValue(NaN, "yesno")).toBe("—");

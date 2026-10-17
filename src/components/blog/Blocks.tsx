@@ -331,14 +331,56 @@ export function DataPoint({ source, label, children }: { source: string; label?:
   );
 }
 
+const PEXELS_WIDTHS = [480, 768, 1080, 1440];
+
+/** A Pexels CDN URL resized by Pexels itself (no Vercel image transformation is spent on it). */
+function pexelsAt(src: string, width: number): string {
+  const u = new URL(src);
+  u.searchParams.set("auto", "compress");
+  u.searchParams.set("cs", "tinysrgb");
+  u.searchParams.set("w", String(width));
+  u.searchParams.delete("h");
+  u.searchParams.delete("dpr");
+  return u.toString();
+}
+
+function isPexels(src: string): boolean {
+  try {
+    return new URL(src).hostname === "images.pexels.com";
+  } catch {
+    return false;
+  }
+}
+
 /** The nth frontmatter image (1-based) as a figure with the Pexels credit line. Unknown n renders nothing. */
 function makeFigure(images: PostImage[]) {
   return function Figure({ n = 1, caption }: { n?: number; caption?: string }) {
     const img = images[n - 1];
     if (!img) return null;
+    const width = img.width ?? 1600;
+    const height = img.height ?? 1067;
+    const sizes = "(max-width: 1024px) 100vw, 720px";
+    const cls = "h-auto w-full rounded-[20px] bg-pane-2";
     return (
       <figure className="my-8 font-sans">
-        <Image src={img.src} alt={img.alt} width={img.width ?? 1600} height={img.height ?? 1067} sizes="(max-width: 1024px) 100vw, 720px" className="h-auto w-full rounded-[20px] bg-pane-2" />
+        {isPexels(img.src) ? (
+          // Pexels serves its own resized, compressed variants; a plain responsive <img> avoids paying
+          // for Vercel image optimisation on stock photos. Width/height keep the layout from shifting.
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={pexelsAt(img.src, 1080)}
+            srcSet={PEXELS_WIDTHS.map((w) => `${pexelsAt(img.src, w)} ${w}w`).join(", ")}
+            sizes={sizes}
+            alt={img.alt}
+            width={width}
+            height={height}
+            loading="lazy"
+            decoding="async"
+            className={cls}
+          />
+        ) : (
+          <Image src={img.src} alt={img.alt} width={width} height={height} sizes={sizes} className={cls} />
+        )}
         {caption || img.credit ? (
           <figcaption className="mt-2 px-1 text-[0.82rem] text-ink-4">
             {caption ? <span>{caption} </span> : null}
