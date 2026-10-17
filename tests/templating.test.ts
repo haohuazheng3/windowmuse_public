@@ -44,6 +44,8 @@ describe("placeholders", () => {
     expect(renderTemplate("{{points|count}} points: {{points|list}}", values).text).toBe("3 points: keeps ice 24 h, one-hand lid and dishwasher safe");
     expect(renderTemplate("{{audience|list}}", values).text).toBe("Hikers and Parents");
     expect(renderTemplate("{{points|bullets}}", values).text).toBe("- keeps ice 24 h\n- one-hand lid\n- dishwasher safe");
+    expect(renderTemplate("{{points|tags}}", values).text).toBe("#KeepsIce24H #OneHandLid #DishwasherSafe");
+    expect(renderTemplate("{{points|first|tag}}", values).text).toBe("#KeepsIce24H");
     expect(FILTERS.cap("")).toBe("");
   });
 

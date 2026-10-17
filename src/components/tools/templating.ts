@@ -114,7 +114,24 @@ export const FILTERS: Record<string, (value: TemplateValue) => string> = {
     splitLines(v)
       .map((l) => `- ${l}`)
       .join("\n"),
+  /** Each item or line as a hashtag, space-separated: "lunch box\nbento" → "#LunchBox #Bento". */
+  tags: (v) =>
+    splitLines(v)
+      .map(hashtag)
+      .filter(Boolean)
+      .join(" "),
+  /** The whole value as one hashtag: "collapsible lunch box" → "#CollapsibleLunchBox". */
+  tag: (v) => hashtag(toText(v)),
 };
+
+/** Letters and digits only, each word capitalised (camel case reads better and is easier for screen readers). */
+function hashtag(s: string): string {
+  const words = s
+    .replace(/^#/, "")
+    .split(/[^\p{L}\p{N}]+/u)
+    .filter(Boolean);
+  return words.length ? `#${words.map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join("")}` : "";
+}
 
 export const FILTER_NAMES: readonly string[] = Object.keys(FILTERS);
 
