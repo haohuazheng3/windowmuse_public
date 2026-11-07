@@ -24,7 +24,7 @@ export default async function ErrorsPage() {
       <AdminTitle
         title="Error inbox"
         count={open.length}
-        lede="Grouped by error name, first stack frame and route. A resolved group that recurs reopens by itself. Open errors (not warnings) turn /api/health red."
+        lede="Grouped by error name, first stack frame and route. A resolved group that recurs reopens by itself. Open errors (not warnings) are summarised in one email a day; they never turn /api/health red."
         actions={
           open.length > 0 ? (
             <form action={resolveAllErrors}>
@@ -35,7 +35,7 @@ export default async function ErrorsPage() {
       />
       {openErrors > 0 ? (
         <p role="status" className="pane-inset px-4 py-3 text-[0.9rem] text-bad">
-          {fmtInt(openErrors)} unresolved {openErrors === 1 ? "error keeps" : "errors keep"} /api/health at 503 until resolved.
+          {fmtInt(openErrors)} unresolved {openErrors === 1 ? "error stays" : "errors stay"} in the daily digest email until resolved.
         </p>
       ) : null}
       <ul className="space-y-3">

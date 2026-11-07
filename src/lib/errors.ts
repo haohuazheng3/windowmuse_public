@@ -66,7 +66,7 @@ const NOTIFY_EVERY_MS = 6 * 60 * 60 * 1000;
  * React hydration mismatches reported by browsers (#418/#423/#425, "Hydration failed").
  * React recovers by rendering on the client, and in the field they come from extensions,
  * translation tools or outdated engines rewriting the DOM before hydration. They stay in
- * the inbox as warnings instead of turning /api/health red.
+ * the inbox as warnings instead of counting as open errors.
  */
 const HYDRATION = /Minified React error #(418|423|425)\b|Hydration failed|error while hydrating|did not match the client/i;
 
@@ -75,7 +75,7 @@ export function effectiveSeverity(source: ErrorSource, requested: Severity, mess
   return requested;
 }
 
-/** Sources whose unresolved errors make /api/health answer 503: our own code, never anonymous browser reports. */
+/** Sources whose unresolved errors /api/health reports as `errors.unresolvedSevere` (informational, never a 503): our own code, never anonymous browser reports. */
 export const HEALTH_SOURCES: readonly ErrorSource[] = ["server", "edge", "worker", "cron"];
 
 const OUR_BUNDLE = /\/_next\/static\//;
@@ -84,7 +84,7 @@ const EXTENSION = /(chrome|moz|safari)-extension:\/\//;
 /**
  * The severity the server accepts from an anonymous browser report. The client's own label is
  * a hint only: "error" stands when the stack runs through our bundle and no extension, so a
- * forged payload can fill the inbox with warnings at most, never page the owner or turn health red.
+ * forged payload can fill the inbox with warnings at most, never page the owner or count as an open error.
  */
 export function clientSeverity(requested: Severity, stack: string | undefined): Severity {
   if (requested !== "error") return "warn";
@@ -94,7 +94,7 @@ export function clientSeverity(requested: Severity, stack: string | undefined): 
 
 /**
  * Record an error in the inbox. Never throws: if the database itself is down the
- * error is still logged to the platform logs (where /api/health will also go red).
+ * error is still logged to the platform logs (and /api/health answers 503 for the database).
  */
 export async function captureError(err: unknown, opts: CaptureOptions = {}): Promise<void> {
   const n = normalize(err);

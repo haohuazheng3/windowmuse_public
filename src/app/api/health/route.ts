@@ -10,10 +10,14 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /**
- * Self-diagnosis. Non-200 when the database is unreachable, a required variable is missing,
- * or the error inbox holds unresolved errors of severity "error" raised by our own code
- * (server, edge, worker, cron; anonymous browser reports never count). Optional features
- * (video engine, AI writer) are reported, not required.
+ * Self-diagnosis. HTTP 200 / `ok: true` whenever the site can serve: the database answers and
+ * every required variable is present. Non-200 (503) only when one of those fails, so the
+ * probes (mail worker cron, GitHub Actions) page the owner for real outages only.
+ *
+ * Informational, never part of `ok`: optional features (video engine, AI writer) and the count
+ * of unresolved errors of severity "error" raised by our own code (server, edge, worker, cron;
+ * anonymous browser reports never count). Open errors reach the owner through the daily error
+ * digest (src/lib/error-digest.ts), not through health.
  *
  * The public answer carries booleans and counts only. Names of missing variables, the
  * commit and the database error text are returned only to a caller that presents
@@ -43,7 +47,8 @@ export async function GET(req: Request) {
 
   const missing = missingEnv();
   const f = features();
-  const ok = dbOk && missing.length === 0 && unresolved === 0;
+  // Unresolved errors stay in the body (errors.unresolvedSevere) but never flip `ok`: they are not an outage.
+  const ok = dbOk && missing.length === 0;
   const body = {
     ok,
     env: VERCEL_ENV,

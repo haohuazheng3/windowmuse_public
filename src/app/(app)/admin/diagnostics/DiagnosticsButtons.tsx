@@ -56,11 +56,11 @@ export function DiagnosticsButtons({ mockEnabled }: { mockEnabled: boolean }) {
       if (action === "throw") {
         push(
           r.status === 500
-            ? { tone: "ok", text: "Server threw and the route answered 500: the error is in the inbox and /api/health is red until you resolve it.", href: "/admin/errors", hrefLabel: "Open error inbox" }
+            ? { tone: "ok", text: "Server threw and the route answered 500: the error is in the inbox (and in the daily digest) until you resolve it.", href: "/admin/errors", hrefLabel: "Open error inbox" }
             : { tone: "bad", text: `Expected a 500, got ${r.status}${r.error ? `: ${r.error}` : ""}.` },
         );
       } else if (action === "resolve-drills") {
-        push(r.ok ? { tone: "ok", text: `Resolved ${r.resolved ?? 0} drill error${r.resolved === 1 ? "" : "s"}. /api/health is green again if nothing else is open.` } : { tone: "bad", text: r.error ?? `Failed with ${r.status}.` });
+        push(r.ok ? { tone: "ok", text: `Resolved ${r.resolved ?? 0} drill error${r.resolved === 1 ? "" : "s"}. They drop out of the daily digest.` } : { tone: "bad", text: r.error ?? `Failed with ${r.status}.` });
       } else if (action === "mock-job") {
         push(
           r.ok && r.job
@@ -91,7 +91,7 @@ export function DiagnosticsButtons({ mockEnabled }: { mockEnabled: boolean }) {
       <div className="grid gap-3 sm:grid-cols-2">
         <Drill
           title="Throw a server error"
-          body="A route handler throws. Expect: error inbox entry (source server), /api/health 503, one alert email."
+          body="A route handler throws. Expect: error inbox entry (source server), one alert email. /api/health stays 200 (open errors are not an outage)."
           button="Throw a server error"
           busy={busy === "throw"}
           busyLabel="Throwing…"
@@ -123,7 +123,7 @@ export function DiagnosticsButtons({ mockEnabled }: { mockEnabled: boolean }) {
         />
         <Drill
           title="Resolve drill errors"
-          body="Marks every open error whose message starts with “Diagnostics:” resolved, so /api/health turns green again."
+          body="Marks every open error whose message starts with “Diagnostics:” resolved, so they drop out of the daily digest."
           button="Resolve drills"
           busy={busy === "resolve-drills"}
           busyLabel="Resolving…"

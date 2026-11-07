@@ -7,11 +7,14 @@
  *             not bounce mail back to a sender.
  * fetch()     POST /notify (Bearer NOTIFY_TOKEN) emails the owner through the send_email
  *             binding. GET /health answers 200.
- * scheduled() Every 30 minutes: probe https://windowmuse.com/api/health. On failure, email the
- *             owner (at most every 3 hours while it stays down); email again when it recovers.
+ * scheduled() Every 30 minutes: probe https://windowmuse.com/api/health (200 = database up and
+ *             required config present; open errors never fail it). Alerts on state change only:
+ *             DOWN after 2 consecutive failed probes, one reminder per 24 h while down, one
+ *             RECOVERED when it passes again (src/alerting.ts). State lives in KV (HEALTH_KV).
  */
 import PostalMime from "postal-mime";
 import { EmailMessage } from "cloudflare:email";
+import { afterSendFailure, alertEmail, decide, parseState, sameState, type HealthState } from "./alerting";
 
 export interface Env {
   APP_URL: string;
@@ -19,6 +22,8 @@ export interface Env {
   INBOX_INGEST_SECRET: string;
   NOTIFY_TOKEN: string;
   OWNER_MAIL: { send(message: EmailMessage): Promise<void> };
+  /** Probe state (key STATE_KEY). The Cache API used before does not persist on workers.dev / cron, which re-sent the alert every run. */
+  HEALTH_KV: KVNamespace;
 }
 
 interface IncomingEmail {
@@ -32,8 +37,7 @@ interface IncomingEmail {
 const FROM_ADDRESS = "alerts@windowmuse.com";
 const FROM_DISPLAY = "WindowMuse Alerts";
 const MAX_BODY_CHARS = 200_000;
-const ALERT_EVERY_MS = 3 * 60 * 60 * 1000;
-const STATE_URL = "https://windowmuse-mail.internal/health-state";
+const STATE_KEY = "health-state";
 
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" } });
@@ -139,49 +143,51 @@ async function ingest(message: IncomingEmail, env: Env): Promise<void> {
 
 /* ---------- health probe ---------- */
 
-interface ProbeState {
-  failing: boolean;
-  lastAlertAt: number;
-  since: number;
-}
-
-async function readState(): Promise<ProbeState> {
-  const hit = await caches.default.match(STATE_URL);
-  if (!hit) return { failing: false, lastAlertAt: 0, since: 0 };
+async function readState(env: Env): Promise<HealthState> {
   try {
-    return (await hit.json()) as ProbeState;
-  } catch {
-    return { failing: false, lastAlertAt: 0, since: 0 };
-  }
-}
-
-async function writeState(s: ProbeState): Promise<void> {
-  await caches.default.put(STATE_URL, new Response(JSON.stringify(s), { headers: { "cache-control": "max-age=604800" } }));
-}
-
-async function probe(env: Env): Promise<void> {
-  const url = `${env.APP_URL.replace(/\/$/, "")}/api/health?probe=${Date.now()}`;
-  let ok = false;
-  let detail = "";
-  try {
-    const res = await fetch(url, { headers: { "user-agent": "windowmuse-health-probe/1.0" }, signal: AbortSignal.timeout(20000) });
-    const body = await res.text();
-    ok = res.status === 200;
-    detail = `HTTP ${res.status}\n${body.slice(0, 1500)}`;
+    return parseState(await env.HEALTH_KV.get(STATE_KEY, "json"));
   } catch (e) {
-    detail = `request failed: ${e instanceof Error ? e.message : String(e)}`;
+    console.error("[windowmuse-mail] health state read failed", e instanceof Error ? e.message : String(e));
+    return parseState(null);
   }
-  const state = await readState();
+}
+
+async function writeState(env: Env, s: HealthState): Promise<void> {
+  await env.HEALTH_KV.put(STATE_KEY, JSON.stringify(s));
+}
+
+async function check(env: Env): Promise<{ ok: boolean; detail: string; healthUrl: string }> {
+  const healthUrl = `${env.APP_URL.replace(/\/$/, "")}/api/health`;
+  try {
+    const res = await fetch(`${healthUrl}?probe=${Date.now()}`, { headers: { "user-agent": "windowmuse-health-probe/1.0" }, signal: AbortSignal.timeout(20000) });
+    const body = await res.text();
+    return { ok: res.status === 200, detail: `HTTP ${res.status}\n${body.slice(0, 1500)}`, healthUrl };
+  } catch (e) {
+    return { ok: false, detail: `request failed: ${e instanceof Error ? e.message : String(e)}`, healthUrl };
+  }
+}
+
+/** One probe. `dry` computes the decision without emailing or writing state. */
+async function probe(env: Env, dry = false) {
+  const { ok, detail, healthUrl } = await check(env);
   const now = Date.now();
-  if (!ok) {
-    if (!state.failing || now - state.lastAlertAt > ALERT_EVERY_MS) {
-      await sendToOwner(env, "ALERT: windowmuse.com health check failing", `The health check at ${url.split("?")[0]} is failing.\n\n${detail}\n\nError inbox: https://windowmuse.com/admin/errors`);
-      await writeState({ failing: true, lastAlertAt: now, since: state.failing ? state.since : now });
+  const prev = await readState(env);
+  const { action, next } = decide(prev, ok, now);
+  let stored = next;
+  let sent = false;
+  if (!dry && action !== "none") {
+    const host = new URL(healthUrl).host;
+    const mail = alertEmail(action, host, action === "recovered" ? prev : next, now, detail, { health: healthUrl, errors: `${env.APP_URL.replace(/\/$/, "")}/admin/errors` });
+    try {
+      await sendToOwner(env, mail.subject, mail.text);
+      sent = true;
+    } catch (e) {
+      console.error("[windowmuse-mail] health alert send failed", action, e instanceof Error ? e.message : String(e));
+      stored = afterSendFailure(action, prev, next);
     }
-  } else if (state.failing) {
-    await sendToOwner(env, "Recovered: windowmuse.com health check passing", `Health is green again after ${Math.round((now - state.since) / 60000)} minutes.\n\n${detail}`);
-    await writeState({ failing: false, lastAlertAt: 0, since: 0 });
   }
+  if (!dry && !sameState(prev, stored)) await writeState(env, stored);
+  return { ok, action, sent, dry, prev, next: dry ? next : stored, detail: detail.slice(0, 300) };
 }
 
 export default {
@@ -221,13 +227,18 @@ export default {
     }
     if (url.pathname === "/probe" && req.method === "POST") {
       if (!bearerMatches(req, env.NOTIFY_TOKEN)) return json({ error: "unauthorized" }, 401);
-      await probe(env);
-      return json({ ok: true, state: await readState() });
+      // ?dry=1: report what the probe would do (no email, no state write).
+      return json(await probe(env, url.searchParams.get("dry") === "1"));
     }
     return json({ error: "not found" }, 404);
   },
 
   async scheduled(_event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
-    ctx.waitUntil(probe(env));
+    ctx.waitUntil(
+      probe(env).then(
+        (r) => console.log("[windowmuse-mail] probe", { ok: r.ok, action: r.action, sent: r.sent, failures: r.next.failures }),
+        (e) => console.error("[windowmuse-mail] probe failed", e instanceof Error ? e.message : String(e)),
+      ),
+    );
   },
 };

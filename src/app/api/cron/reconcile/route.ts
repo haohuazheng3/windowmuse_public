@@ -1,6 +1,7 @@
 import { bearerMatches } from "@/lib/admin";
 import { APP_STATE_KEYS, setAppState } from "@/lib/app-state";
 import { env } from "@/lib/env";
+import { sendErrorDigest } from "@/lib/error-digest";
 import { captureError } from "@/lib/errors";
 import { notifyOwner } from "@/lib/notify";
 import { needsAttention, reconcile } from "@/lib/reconcile";
@@ -24,9 +25,18 @@ class StripePermissionSkipped extends Error {
  * Daily (Vercel Cron / GitHub Actions, Bearer CRON_SECRET) or on demand: Stripe paid vs
  * database granted over the last `?days=` (default 7, max 90), with repairs. The last
  * report is kept in app_state for the admin diagnostics page.
+ *
+ * The same daily tick sends the open-error digest first (at most one email per UTC day,
+ * none when the inbox is clear; see src/lib/error-digest.ts). It never blocks reconcile.
  */
 async function run(req: Request): Promise<Response> {
   if (!bearerMatches(req, env("CRON_SECRET"))) return Response.json({ error: "unauthorized" }, { status: 401, headers: NO_STORE });
+  try {
+    const digest = await sendErrorDigest();
+    console.log("[cron:reconcile] error digest", digest);
+  } catch (err) {
+    await captureError(err, { route: "/api/cron/reconcile", source: "cron", severity: "warn", context: { stage: "error-digest" } });
+  }
   if (stripeMode() === "missing") return Response.json({ error: "Stripe is not configured" }, { status: 503, headers: NO_STORE });
   const days = Math.min(90, Math.max(1, Number(new URL(req.url).searchParams.get("days") ?? 7) || 7));
   const startedAt = Date.now();
