@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { clientSeverity, effectiveSeverity, fingerprintOf, firstFrame } from "@/lib/errors";
+import { clientSeverity, effectiveSeverity, fingerprintOf, firstFrame, shouldNotifyGroup } from "@/lib/errors";
 
 describe("error fingerprinting", () => {
   it("strips line/column numbers and build hashes so deploys don't split groups", () => {
@@ -42,5 +42,20 @@ describe("client-reported severity", () => {
     expect(clientSeverity("error", "Error: y\n    at https://cdn.example.com/widget.js:1:1")).toBe("warn");
     expect(clientSeverity("error", `${ours}\n    at chrome-extension://abc/content.js:1:1`)).toBe("warn");
     expect(clientSeverity("warn", ours)).toBe("warn");
+  });
+});
+
+describe("owner email per error group", () => {
+  it("emails once, when a severe group from our own code first appears", () => {
+    expect(shouldNotifyGroup("server", { severity: "error", notifiedAt: null })).toBe(true);
+    expect(shouldNotifyGroup("cron", { severity: "error", notifiedAt: null })).toBe(true);
+  });
+  it("never re-notifies the same group, however old the last email (the daily digest covers it)", () => {
+    expect(shouldNotifyGroup("server", { severity: "error", notifiedAt: new Date("2020-01-01T00:00:00Z") })).toBe(false);
+    expect(shouldNotifyGroup("server", { severity: "error", notifiedAt: "2026-11-06T21:15:53Z" })).toBe(false);
+  });
+  it("never emails for warnings or browser reports", () => {
+    expect(shouldNotifyGroup("server", { severity: "warn", notifiedAt: null })).toBe(false);
+    expect(shouldNotifyGroup("client", { severity: "error", notifiedAt: null })).toBe(false);
   });
 });

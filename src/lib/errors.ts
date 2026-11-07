@@ -1,6 +1,6 @@
 import "server-only";
 import { createHash } from "node:crypto";
-import { sql } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import { waitUntil } from "@vercel/functions";
 import { db } from "./db";
 import { errorGroups } from "./db/schema";
@@ -60,7 +60,15 @@ export function fingerprintOf(name: string, frame: string, route: string | null 
   return createHash("sha1").update(`${name}|${anchor}|${route ?? ""}`).digest("hex");
 }
 
-const NOTIFY_EVERY_MS = 6 * 60 * 60 * 1000;
+/**
+ * Whether a captured error should email the owner: only the first time a severe group from our
+ * own code is seen. Never again for the same group (recurring or reopened): open groups are
+ * covered by the once-a-day digest (src/lib/error-digest.ts). Browser reports never page anyone
+ * (anonymous input can be forged at will).
+ */
+export function shouldNotifyGroup(source: ErrorSource, row: { severity: string; notifiedAt: Date | string | null }): boolean {
+  return source !== "client" && row.severity === "error" && !row.notifiedAt;
+}
 
 /**
  * React hydration mismatches reported by browsers (#418/#423/#425, "Hydration failed").
@@ -142,17 +150,17 @@ export async function captureError(err: unknown, opts: CaptureOptions = {}): Pro
       });
 
     const row = rows[0];
-    // Browser reports never page anyone: they are reviewed in the inbox (anonymous input can be forged at will).
-    const shouldNotify =
-      row &&
-      source !== "client" &&
-      row.severity === "error" &&
-      (!row.notifiedAt || Date.now() - new Date(row.notifiedAt).getTime() > NOTIFY_EVERY_MS);
-    if (shouldNotify) {
-      await db
-        .update(errorGroups)
-        .set({ notifiedAt: sql`now()` })
-        .where(sql`${errorGroups.id} = ${row.id}`);
+    // Claim the one notification atomically (notified_at stays set for good), so concurrent
+    // first occurrences of the same group send a single email.
+    const claimed =
+      row && shouldNotifyGroup(source, row)
+        ? await db
+            .update(errorGroups)
+            .set({ notifiedAt: sql`now()` })
+            .where(and(eq(errorGroups.id, row.id), isNull(errorGroups.notifiedAt)))
+            .returning({ id: errorGroups.id })
+        : [];
+    if (row && claimed.length > 0) {
       const text = [
         `${n.name}: ${n.message}`,
         "",

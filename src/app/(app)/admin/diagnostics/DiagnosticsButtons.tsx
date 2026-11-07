@@ -91,7 +91,7 @@ export function DiagnosticsButtons({ mockEnabled }: { mockEnabled: boolean }) {
       <div className="grid gap-3 sm:grid-cols-2">
         <Drill
           title="Throw a server error"
-          body="A route handler throws. Expect: error inbox entry (source server), one alert email. /api/health stays 200 (open errors are not an outage)."
+          body="A route handler throws. Expect: error inbox entry (source server), one alert email the first time (a group never emails twice; open ones are in the daily digest). /api/health stays 200."
           button="Throw a server error"
           busy={busy === "throw"}
           busyLabel="Throwing…"
